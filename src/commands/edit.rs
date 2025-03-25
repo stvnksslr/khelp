@@ -316,7 +316,9 @@ pub fn edit_context(context_name: Option<String>) -> Result<()> {
 
     // Update context if edited
     if let Some(edited_context) = edited_context_value {
-        if let Ok(edited_context_entry) = serde_yaml::from_value::<crate::config::kubernetes::ContextEntry>(edited_context) {
+        if let Ok(edited_context_entry) =
+            serde_yaml::from_value::<crate::config::kubernetes::ContextEntry>(edited_context)
+        {
             // Find the context to update
             if let Some(index) = modified_config
                 .contexts
@@ -330,7 +332,9 @@ pub fn edit_context(context_name: Option<String>) -> Result<()> {
 
     // Update cluster if edited
     if let Some(edited_cluster) = edited_cluster_value {
-        if let Ok(edited_cluster_entry) = serde_yaml::from_value::<crate::config::kubernetes::ClusterEntry>(edited_cluster) {
+        if let Ok(edited_cluster_entry) =
+            serde_yaml::from_value::<crate::config::kubernetes::ClusterEntry>(edited_cluster)
+        {
             // Find the cluster to update
             if let Some(index) = modified_config
                 .clusters
@@ -344,7 +348,9 @@ pub fn edit_context(context_name: Option<String>) -> Result<()> {
 
     // Update user if edited
     if let Some(edited_user) = edited_user_value {
-        if let Ok(edited_user_entry) = serde_yaml::from_value::<crate::config::kubernetes::UserEntry>(edited_user) {
+        if let Ok(edited_user_entry) =
+            serde_yaml::from_value::<crate::config::kubernetes::UserEntry>(edited_user)
+        {
             // Find the user to update
             if let Some(index) = modified_config
                 .users

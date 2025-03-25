@@ -1,5 +1,5 @@
-use console::style;
 use crate::config::kubernetes::KubeConfig;
+use console::style;
 
 /// Display details about the currently active context
 pub fn show_current_context(config: &KubeConfig) {
