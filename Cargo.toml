@@ -3,6 +3,7 @@ name = "khelp"
 version = "0.1.0"
 edition = "2024"
 description = "A tool for managing kubernetes contexts"
+repository = "https://github.com/stvnksslr/khelp"
 license = "MIT"
 
 [dependencies]
