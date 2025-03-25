@@ -8,7 +8,6 @@ pub fn show_current_context(config: &KubeConfig) {
         style(&config.current_context).green().bold()
     );
 
-    // Find the current context to display more details
     if let Some(context) = config
         .contexts
         .iter()
