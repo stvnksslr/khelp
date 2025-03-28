@@ -1,7 +1,7 @@
 # Khelp(er)
 
 [![Crates.io](https://img.shields.io/crates/v/khelp.svg)](https://crates.io/crates/khelp)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 A user-friendly CLI tool to manage Kubernetes contexts with ease.
 
