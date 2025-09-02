@@ -3,6 +3,9 @@ mod commands;
 mod config;
 mod utils;
 
+#[cfg(test)]
+mod test_utils;
+
 use anyhow::Result;
 use clap::Parser;
 use log::{debug, info};

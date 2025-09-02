@@ -404,18 +404,18 @@ compdef _khelp khelp
 
     // Update .zshrc if needed
     let zshrc_path = home.join(".zshrc");
-    if let Ok(zshrc_content) = fs::read_to_string(&zshrc_path) {
-        if !zshrc_content.contains("fpath=(~/.zfunc") {
-            let mut zshrc_file = fs::OpenOptions::new()
-                .append(true)
-                .open(zshrc_path)
-                .context("Failed to open .zshrc")?;
+    if let Ok(zshrc_content) = fs::read_to_string(&zshrc_path)
+        && !zshrc_content.contains("fpath=(~/.zfunc")
+    {
+        let mut zshrc_file = fs::OpenOptions::new()
+            .append(true)
+            .open(zshrc_path)
+            .context("Failed to open .zshrc")?;
 
-            writeln!(zshrc_file, "\n# Add khelp completions to fpath")?;
-            writeln!(zshrc_file, "fpath=(~/.zfunc $fpath)")?;
-            writeln!(zshrc_file, "autoload -Uz compinit && compinit")?;
-            debug!("Added fpath configuration to ~/.zshrc");
-        }
+        writeln!(zshrc_file, "\n# Add khelp completions to fpath")?;
+        writeln!(zshrc_file, "fpath=(~/.zfunc $fpath)")?;
+        writeln!(zshrc_file, "autoload -Uz compinit && compinit")?;
+        debug!("Added fpath configuration to ~/.zshrc");
     }
 
     println!(

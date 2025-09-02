@@ -87,3 +87,275 @@ pub fn save_kube_config(config: &KubeConfig, create_backup: bool) -> Result<()> 
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::sync::Mutex;
+    use tempfile::tempdir;
+
+    // Global environment lock for all tests that manipulate HOME
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    fn create_test_kube_config() -> String {
+        r#"apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: LS0tLS1CRUdJTi...
+    server: https://cluster1.example.com
+  name: cluster1
+- cluster:
+    certificate-authority-data: LS0tLS1CRUdJTi...
+    server: https://cluster2.example.com
+  name: cluster2
+contexts:
+- context:
+    cluster: cluster1
+    user: user1
+    namespace: default
+  name: context1
+- context:
+    cluster: cluster2
+    user: user2
+  name: context2
+current-context: context1
+kind: Config
+preferences: {}
+users:
+- name: user1
+  user:
+    client-certificate-data: LS0tLS1CRUdJTi...
+    client-key-data: LS0tLS1CRUdJTi...
+- name: user2
+  user:
+    token: eyJhbGciOiJSUzI1NiIsImtpZCI6IiJ9..."#
+            .to_string()
+    }
+
+    #[test]
+    fn test_load_kube_config_success() {
+        let _guard = ENV_LOCK.lock().unwrap();
+
+        // Save original HOME
+        let original_home = std::env::var("HOME").ok();
+
+        let temp_dir = tempdir().unwrap();
+        let kube_dir = temp_dir.path().join(".kube");
+        fs::create_dir_all(&kube_dir).unwrap();
+
+        let config_path = kube_dir.join("config");
+        fs::write(&config_path, create_test_kube_config()).unwrap();
+
+        unsafe {
+            std::env::set_var("HOME", temp_dir.path());
+        }
+
+        let result = load_kube_config();
+        assert!(result.is_ok());
+
+        let config = result.unwrap();
+        assert_eq!(config.contexts.len(), 2);
+        assert_eq!(config.current_context, "context1");
+        assert_eq!(config.clusters.len(), 2);
+        assert_eq!(config.users.len(), 2);
+
+        // Restore original HOME
+        unsafe {
+            if let Some(home) = original_home {
+                std::env::set_var("HOME", home);
+            } else {
+                std::env::remove_var("HOME");
+            }
+        }
+    }
+
+    #[test]
+    fn test_load_kube_config_file_not_found() {
+        let _guard = ENV_LOCK.lock().unwrap();
+
+        // Save original HOME
+        let original_home = std::env::var("HOME").ok();
+
+        let temp_dir = tempdir().unwrap();
+        unsafe {
+            std::env::set_var("HOME", temp_dir.path());
+        }
+
+        let result = load_kube_config();
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Kubernetes config file not found")
+        );
+
+        // Restore original HOME
+        unsafe {
+            if let Some(home) = original_home {
+                std::env::set_var("HOME", home);
+            } else {
+                std::env::remove_var("HOME");
+            }
+        }
+    }
+
+    #[test]
+    fn test_load_kube_config_invalid_yaml() {
+        let _guard = ENV_LOCK.lock().unwrap();
+
+        // Save original HOME
+        let original_home = std::env::var("HOME").ok();
+
+        let temp_dir = tempdir().unwrap();
+        let kube_dir = temp_dir.path().join(".kube");
+        fs::create_dir_all(&kube_dir).unwrap();
+
+        let config_path = kube_dir.join("config");
+        fs::write(&config_path, "invalid: yaml: content: [").unwrap();
+
+        unsafe {
+            std::env::set_var("HOME", temp_dir.path());
+        }
+
+        let result = load_kube_config();
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Failed to parse Kubernetes config YAML")
+        );
+
+        // Restore original HOME
+        unsafe {
+            if let Some(home) = original_home {
+                std::env::set_var("HOME", home);
+            } else {
+                std::env::remove_var("HOME");
+            }
+        }
+    }
+
+    #[test]
+    fn test_save_kube_config_with_backup() {
+        let _guard = ENV_LOCK.lock().unwrap();
+
+        // Save original HOME
+        let original_home = std::env::var("HOME").ok();
+
+        let temp_dir = tempdir().unwrap();
+        let kube_dir = temp_dir.path().join(".kube");
+        fs::create_dir_all(&kube_dir).unwrap();
+
+        let config_path = kube_dir.join("config");
+        let original_content = create_test_kube_config();
+        fs::write(&config_path, &original_content).unwrap();
+
+        unsafe {
+            std::env::set_var("HOME", temp_dir.path());
+        }
+
+        let mut config = load_kube_config().unwrap();
+        config.current_context = "context2".to_string();
+
+        let result = save_kube_config(&config, true);
+        assert!(result.is_ok());
+
+        let backup_path = config_path.with_extension("bak");
+        assert!(backup_path.exists());
+
+        let backup_content = fs::read_to_string(&backup_path).unwrap();
+        let updated_content = fs::read_to_string(&config_path).unwrap();
+
+        assert_eq!(backup_content, original_content);
+        assert!(updated_content.contains("current-context: context2"));
+
+        // Restore original HOME
+        unsafe {
+            if let Some(home) = original_home {
+                std::env::set_var("HOME", home);
+            } else {
+                std::env::remove_var("HOME");
+            }
+        }
+    }
+
+    #[test]
+    fn test_save_kube_config_without_backup() {
+        let _guard = ENV_LOCK.lock().unwrap();
+
+        // Save original HOME
+        let original_home = std::env::var("HOME").ok();
+
+        let temp_dir = tempdir().unwrap();
+        let kube_dir = temp_dir.path().join(".kube");
+        fs::create_dir_all(&kube_dir).unwrap();
+
+        let config_path = kube_dir.join("config");
+        fs::write(&config_path, create_test_kube_config()).unwrap();
+
+        unsafe {
+            std::env::set_var("HOME", temp_dir.path());
+        }
+
+        let mut config = load_kube_config().unwrap();
+        config.current_context = "context2".to_string();
+
+        let result = save_kube_config(&config, false);
+        assert!(result.is_ok());
+
+        let backup_path = config_path.with_extension("bak");
+        assert!(!backup_path.exists());
+
+        let updated_content = fs::read_to_string(&config_path).unwrap();
+        assert!(updated_content.contains("current-context: context2"));
+
+        // Restore original HOME
+        unsafe {
+            if let Some(home) = original_home {
+                std::env::set_var("HOME", home);
+            } else {
+                std::env::remove_var("HOME");
+            }
+        }
+    }
+
+    #[test]
+    fn test_get_kube_config_path_success() {
+        let _guard = ENV_LOCK.lock().unwrap();
+
+        // Save original HOME
+        let original_home = std::env::var("HOME").ok();
+
+        let temp_dir = tempdir().unwrap();
+        let kube_dir = temp_dir.path().join(".kube");
+        fs::create_dir_all(&kube_dir).unwrap();
+
+        let config_path = kube_dir.join("config");
+        fs::write(&config_path, create_test_kube_config()).unwrap();
+
+        unsafe {
+            std::env::set_var("HOME", temp_dir.path());
+        }
+
+        let result = get_kube_config_path();
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), config_path);
+
+        // Restore original HOME
+        unsafe {
+            if let Some(home) = original_home {
+                std::env::set_var("HOME", home);
+            } else {
+                std::env::remove_var("HOME");
+            }
+        }
+    }
+
+    // Note: This test is challenging to implement due to platform-specific behavior
+    // of home directory detection. The dirs::home_dir() function may use system calls
+    // rather than just environment variables, making mocking difficult.
+    // The functionality is tested via integration tests instead.
+}
