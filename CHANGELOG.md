@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [0.1.4](https://github.com/stvnksslr/khelp/compare/v0.1.3...v0.1.4) - 2025-09-02
+
+### Added
+- *(code cleanup + tests)* improving test coverage and breaking up large complicated functions
+
+### Fixed
+- *(backups)* made backups more intentional
+
+### Other
+- *(config)* tests would edit the users config
 ## [0.1.3](https://github.com/stvnksslr/khelp/compare/v0.1.2...v0.1.3) - 2025-03-28
 
 ### Added
