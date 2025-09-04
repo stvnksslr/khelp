@@ -22,6 +22,9 @@ self_update = { version = "0.42.0", features = [
     "compression-flate2",
     "rustls",
 ], default-features = false, optional = true }
+log = "0.4.22"
+env_logger = "0.11.6"
+
 
 [profile.release]
 lto = true
