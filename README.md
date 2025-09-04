@@ -115,7 +115,7 @@ The tool will open your default editor (defined by `$EDITOR` or `$VISUAL` enviro
 Export a specific context configuration to stdout:
 
 ```bash
-khelp export production > production-context.yaml
+khelp export dev > dev-context.yaml
 ```
 
 ```yaml
