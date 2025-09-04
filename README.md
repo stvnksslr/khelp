@@ -15,6 +15,12 @@ A user-friendly CLI tool to manage Kubernetes contexts with ease.
 
 ## Installation
 
+easy install script, source located at [install.sh](https://github.com/stvnksslr/uv-migrator/blob/main/khelp/install.sh)
+
+```sh
+curl https://files.stvnksslr.com/khelp/install.sh | bash
+```
+
 ### From Cargo
 
 ```bash
