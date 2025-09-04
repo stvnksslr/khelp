@@ -47,17 +47,24 @@ pub fn load_kube_config() -> Result<KubeConfig> {
 }
 
 /// Saves the Kubernetes config to the default location
-pub fn save_kube_config(config: &KubeConfig) -> Result<()> {
+///
+/// # Arguments
+///
+/// * `config` - The Kubernetes configuration to save
+/// * `create_backup` - Whether to create a backup of the existing config (defaults to true)
+pub fn save_kube_config(config: &KubeConfig, create_backup: bool) -> Result<()> {
     let kube_config_path = get_kube_config_path()?;
     debug!(
         "Saving Kubernetes config to: {}",
         kube_config_path.display()
     );
 
-    let backup_path = kube_config_path.with_extension("bak");
-    fs::copy(&kube_config_path, &backup_path)
-        .with_context(|| format!("Failed to create backup at: {}", backup_path.display()))?;
-    debug!("Created backup at: {}", backup_path.display());
+    if create_backup {
+        let backup_path = kube_config_path.with_extension("bak");
+        fs::copy(&kube_config_path, &backup_path)
+            .with_context(|| format!("Failed to create backup at: {}", backup_path.display()))?;
+        debug!("Created backup at: {}", backup_path.display());
+    }
 
     let config_yaml =
         serde_yaml::to_string(config).context("Failed to serialize Kubernetes config to YAML")?;
@@ -69,9 +76,14 @@ pub fn save_kube_config(config: &KubeConfig) -> Result<()> {
         )
     })?;
 
-    info!(
-        "Config updated successfully (backup saved at: {})",
-        backup_path.display()
-    );
+    if create_backup {
+        let backup_path = kube_config_path.with_extension("bak");
+        info!(
+            "Config updated successfully (backup saved at: {})",
+            backup_path.display()
+        );
+    } else {
+        info!("Config updated successfully (no backup created)");
+    }
     Ok(())
 }
