@@ -16,8 +16,8 @@ builds:
       - x86_64-apple-darwin
       - aarch64-unknown-linux-gnu
       - aarch64-apple-darwin
-    id: "uv-migrator"
-    binary: uv-migrator
+    id: "khelp"
+    binary: khelp
 
 archives:
   - formats: [ 'tar.gz' ]
@@ -26,7 +26,7 @@ archives:
     name_template: >-
       {{ .ProjectName }}-{{ .Target }}
     builds:
-      - uv-migrator
+      - khelp
 
 changelog:
   disable: true
