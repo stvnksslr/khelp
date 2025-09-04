@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use console::style;
 use dialoguer::{Select, theme::ColorfulTheme};
 
-use crate::config::operations::{load_kube_config, save_kube_config};
+use crate::config::operations::load_kube_config;
 
 /// Switch to a different Kubernetes context
 ///
@@ -35,7 +35,6 @@ pub fn switch_context(context_name: Option<String>) -> Result<()> {
 
     config.current_context = selected_context.clone();
 
-    save_kube_config(&config)?;
     println!(
         "Switched to context: {}",
         style(&selected_context).green().bold()
