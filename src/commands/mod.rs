@@ -1,5 +1,5 @@
-pub mod list;
 pub mod current;
-pub mod switch;
 pub mod edit;
 pub mod export;
+pub mod list;
+pub mod switch;

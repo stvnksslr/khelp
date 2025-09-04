@@ -1,5 +1,5 @@
-use console::style;
 use crate::config::kubernetes::KubeConfig;
+use console::style;
 
 /// List all available Kubernetes contexts, highlighting the current one
 pub fn list_contexts(config: &KubeConfig) {
