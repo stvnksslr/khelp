@@ -20,9 +20,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Set up Zig
-        uses: mlugg/setup-zig@v1
-        with:
-          version: 0.13.0
+        uses: mlugg/setup-zig@v2
 
       - name: Set up Go
         uses: actions/setup-go@v5
