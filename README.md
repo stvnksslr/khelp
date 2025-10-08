@@ -301,7 +301,3 @@ The update command connects to GitHub to check for new releases. If a newer vers
 ## Environment Variables
 
 - `EDITOR` or `VISUAL`: Specifies the editor to use when editing context configurations (defaults to `vi` on Unix systems and `notepad` on Windows)
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
