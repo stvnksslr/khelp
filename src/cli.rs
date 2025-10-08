@@ -1,5 +1,6 @@
 use clap::{Parser, Subcommand, ValueHint};
 use clap_complete::Shell;
+use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -34,6 +35,40 @@ pub enum Commands {
     Export {
         #[arg(value_hint = ValueHint::Other)]
         context_name: Option<String>,
+    },
+
+    /// Delete a specific context
+    Delete {
+        /// Name of the context to delete
+        #[arg(value_hint = ValueHint::Other)]
+        context_name: Option<String>,
+
+        /// Skip confirmation prompt
+        #[arg(long)]
+        force: bool,
+
+        /// Also delete orphaned clusters and users
+        #[arg(long)]
+        cleanup: bool,
+    },
+
+    /// Add contexts from an external kubeconfig file
+    Add {
+        /// Path to the kubeconfig file to import
+        #[arg(value_hint = ValueHint::FilePath)]
+        file_path: PathBuf,
+
+        /// Rename conflicting entries by appending a suffix
+        #[arg(long)]
+        rename: bool,
+
+        /// Overwrite existing entries with the same name
+        #[arg(long)]
+        overwrite: bool,
+
+        /// Switch to the first newly added context after import
+        #[arg(long)]
+        switch: bool,
     },
 
     /// Generate or install shell completions

@@ -335,7 +335,7 @@ pub fn edit_context(context_name: Option<String>) -> Result<()> {
         }
     }
 
-    save_kube_config(&modified_config, true)?;
+    save_kube_config(&modified_config)?;
     info!(
         "Context '{}' configuration updated successfully",
         style(&selected_context_name).green().bold()

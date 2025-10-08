@@ -1,5 +1,7 @@
+pub mod add;
 pub mod completions;
 pub mod current;
+pub mod delete;
 pub mod edit;
 pub mod export;
 pub mod list;

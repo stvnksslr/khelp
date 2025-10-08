@@ -41,6 +41,23 @@ fn main() -> Result<()> {
             debug!("Executing Export command");
             commands::export::export_context(context_name)?;
         }
+        Commands::Delete {
+            context_name,
+            force,
+            cleanup,
+        } => {
+            debug!("Executing Delete command");
+            commands::delete::delete_context(context_name, force, cleanup)?;
+        }
+        Commands::Add {
+            file_path,
+            rename,
+            overwrite,
+            switch,
+        } => {
+            debug!("Executing Add command with file: {:?}", file_path);
+            commands::add::add_context(file_path, rename, overwrite, switch)?;
+        }
         Commands::Completions { shell, install } => {
             debug!(
                 "Executing Completions command with shell: {:?}, install: {}",

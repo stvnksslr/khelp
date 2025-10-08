@@ -12,6 +12,8 @@ A user-friendly CLI tool to manage Kubernetes contexts with ease.
 - 🔄 **Switch** between contexts with interactive selection
 - ✏️ **Edit** context configurations with your preferred editor
 - 📤 **Export** specific contexts for sharing or backup
+- 🗑️ **Delete** contexts with optional cleanup of orphaned resources
+- ➕ **Add** contexts from external kubeconfig files
 - 🔄 **Update** to the latest version using built-in self-update
 - 🛠️ **Shell Completions** for bash, zsh, and fish
 
@@ -44,6 +46,8 @@ Commands:
   switch       Switch to a different context
   edit         Edit a specific context
   export       Export a specific context to stdout (can be redirected to a file)
+  delete       Delete a specific context
+  add          Add contexts from an external kubeconfig file
   completions  Generate or install shell completions
   update       Check for updates to khelp
   help         Print this message or the help of the given subcommand(s)
@@ -117,7 +121,7 @@ Or specify a context to edit:
 khelp edit staging
 ```
 
-The tool will open your default editor (defined by `$EDITOR` or `$VISUAL` environment variables) with the context configuration. Changes are automatically saved back to your Kubernetes config file with a backup created.
+The tool will open your default editor (defined by `$EDITOR` or `$VISUAL` environment variables) with the context configuration. Changes are automatically saved back to your Kubernetes config file.
 
 ### Export
 
@@ -151,6 +155,92 @@ users:
 ```
 
 This is useful for sharing configurations or creating backups of specific contexts.
+
+### Delete
+
+Delete a Kubernetes context:
+
+```bash
+khelp delete
+```
+
+This will display an interactive menu to select the context to delete. You can also specify the context directly:
+
+```bash
+khelp delete staging
+```
+
+By default, you'll be prompted for confirmation. You can skip the confirmation with `--force`:
+
+```bash
+khelp delete staging --force
+```
+
+The delete command can also clean up orphaned clusters and users (resources no longer referenced by any context):
+
+```bash
+khelp delete staging --cleanup
+```
+
+Example output:
+
+```
+✓ Deleted context: staging
+✓ Deleted orphaned cluster: staging-cluster
+✓ Deleted orphaned user: staging-user
+```
+
+**Note:** If you delete the current context, khelp will automatically switch you to another available context.
+
+### Add
+
+Import contexts from an external kubeconfig file:
+
+```bash
+khelp add ~/Downloads/new-cluster.yaml
+```
+
+By default, if a context with the same name already exists, it will be skipped:
+
+```bash
+khelp add ~/Downloads/cluster.yaml
+```
+
+```
+Import Summary:
+───────────────
+− Skipped context(s): production
+− Skipped cluster(s): production-cluster
+− Skipped user(s): production-user
+
+Tip: Use --rename to rename conflicting entries or --overwrite to overwrite them.
+```
+
+To rename conflicting entries automatically:
+
+```bash
+khelp add ~/Downloads/cluster.yaml --rename
+```
+
+```
+Import Summary:
+───────────────
+✓ Added context(s): production-imported
+✓ Added cluster(s): production-cluster-imported
+✓ Added user(s): production-user-imported
+```
+
+To overwrite existing entries:
+
+```bash
+khelp add ~/Downloads/cluster.yaml --overwrite
+```
+
+You can also automatically switch to the newly imported context:
+
+```bash
+khelp add ~/Downloads/cluster.yaml --rename --switch
+```
 
 ### Completions
 

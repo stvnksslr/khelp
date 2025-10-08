@@ -44,7 +44,7 @@ pub fn switch_context(context_name: Option<String>) -> Result<()> {
         old_context, selected_context
     );
 
-    save_kube_config(&config, false)?;
+    save_kube_config(&config)?;
 
     info!(
         "Switched to context: {}",
