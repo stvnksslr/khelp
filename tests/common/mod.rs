@@ -72,6 +72,7 @@ users:
     }
 
     /// Creates a test fixture with a single context
+    #[allow(dead_code)]
     pub fn with_single_context(context_name: &str) -> Self {
         let content = format!(
             r#"apiVersion: v1
@@ -156,6 +157,7 @@ users:
     }
 
     /// Creates an external kubeconfig file for testing imports
+    #[allow(dead_code)]
     pub fn create_external_config(&self, name: &str) -> PathBuf {
         let external_path = self.temp_dir.path().join(format!("{}.yaml", name));
         let content = format!(

@@ -100,60 +100,54 @@ pub fn edit_context(context_name: Option<String>) -> Result<()> {
     if let serde_yaml::Value::Mapping(map) = &yaml_value {
         if let Some(serde_yaml::Value::Sequence(contexts)) =
             map.get(serde_yaml::Value::String("contexts".to_string()))
-        {
-            if let Some(context) = contexts.iter().find(|ctx| {
-                if let serde_yaml::Value::Mapping(ctx_map) = ctx {
-                    if let Some(serde_yaml::Value::String(name)) =
+            && let Some(context) = contexts.iter().find(|ctx| {
+                if let serde_yaml::Value::Mapping(ctx_map) = ctx
+                    && let Some(serde_yaml::Value::String(name)) =
                         ctx_map.get(serde_yaml::Value::String("name".to_string()))
-                    {
-                        return name == &selected_context_name;
-                    }
+                {
+                    return name == &selected_context_name;
                 }
                 false
-            }) {
-                combined_yaml.push_str("# Context entry\n");
-                let context_yaml = serde_yaml::to_string(context).unwrap_or_default();
-                combined_yaml.push_str(&context_yaml);
-                combined_yaml.push_str("\n\n");
-            }
+            })
+        {
+            combined_yaml.push_str("# Context entry\n");
+            let context_yaml = serde_yaml::to_string(context).unwrap_or_default();
+            combined_yaml.push_str(&context_yaml);
+            combined_yaml.push_str("\n\n");
         }
 
         if let Some(serde_yaml::Value::Sequence(clusters)) =
             map.get(serde_yaml::Value::String("clusters".to_string()))
-        {
-            if let Some(cluster) = clusters.iter().find(|c| {
-                if let serde_yaml::Value::Mapping(c_map) = c {
-                    if let Some(serde_yaml::Value::String(name)) =
+            && let Some(cluster) = clusters.iter().find(|c| {
+                if let serde_yaml::Value::Mapping(c_map) = c
+                    && let Some(serde_yaml::Value::String(name)) =
                         c_map.get(serde_yaml::Value::String("name".to_string()))
-                    {
-                        return name == cluster_name;
-                    }
+                {
+                    return name == cluster_name;
                 }
                 false
-            }) {
-                combined_yaml.push_str("# Cluster entry\n");
-                let cluster_yaml = serde_yaml::to_string(cluster).unwrap_or_default();
-                combined_yaml.push_str(&cluster_yaml);
-                combined_yaml.push_str("\n\n");
-            }
+            })
+        {
+            combined_yaml.push_str("# Cluster entry\n");
+            let cluster_yaml = serde_yaml::to_string(cluster).unwrap_or_default();
+            combined_yaml.push_str(&cluster_yaml);
+            combined_yaml.push_str("\n\n");
         }
         if let Some(serde_yaml::Value::Sequence(users)) =
             map.get(serde_yaml::Value::String("users".to_string()))
-        {
-            if let Some(user) = users.iter().find(|u| {
-                if let serde_yaml::Value::Mapping(u_map) = u {
-                    if let Some(serde_yaml::Value::String(name)) =
+            && let Some(user) = users.iter().find(|u| {
+                if let serde_yaml::Value::Mapping(u_map) = u
+                    && let Some(serde_yaml::Value::String(name)) =
                         u_map.get(serde_yaml::Value::String("name".to_string()))
-                    {
-                        return name == user_name;
-                    }
+                {
+                    return name == user_name;
                 }
                 false
-            }) {
-                combined_yaml.push_str("# User entry\n");
-                let user_yaml = serde_yaml::to_string(user).unwrap_or_default();
-                combined_yaml.push_str(&user_yaml);
-            }
+            })
+        {
+            combined_yaml.push_str("# User entry\n");
+            let user_yaml = serde_yaml::to_string(user).unwrap_or_default();
+            combined_yaml.push_str(&user_yaml);
         }
     }
 
@@ -242,14 +236,13 @@ pub fn edit_context(context_name: Option<String>) -> Result<()> {
 
                 if let Some(serde_yaml::Value::String(name)) =
                     map.get(serde_yaml::Value::String("name".to_string()))
+                    && name != &selected_context_name
                 {
-                    if name != &selected_context_name {
-                        anyhow::bail!(
-                            "Context name cannot be changed (was: {}, now: {})",
-                            selected_context_name,
-                            name
-                        );
-                    }
+                    anyhow::bail!(
+                        "Context name cannot be changed (was: {}, now: {})",
+                        selected_context_name,
+                        name
+                    );
                 }
             } else if let Some(serde_yaml::Value::Mapping(_cluster_map)) =
                 map.get(serde_yaml::Value::String("cluster".to_string()))
@@ -258,14 +251,13 @@ pub fn edit_context(context_name: Option<String>) -> Result<()> {
 
                 if let Some(serde_yaml::Value::String(name)) =
                     map.get(serde_yaml::Value::String("name".to_string()))
+                    && name != cluster_name
                 {
-                    if name != cluster_name {
-                        anyhow::bail!(
-                            "Cluster name cannot be changed (was: {}, now: {})",
-                            cluster_name,
-                            name
-                        );
-                    }
+                    anyhow::bail!(
+                        "Cluster name cannot be changed (was: {}, now: {})",
+                        cluster_name,
+                        name
+                    );
                 }
             } else if let Some(serde_yaml::Value::Mapping(_user_map)) =
                 map.get(serde_yaml::Value::String("user".to_string()))
@@ -274,14 +266,13 @@ pub fn edit_context(context_name: Option<String>) -> Result<()> {
 
                 if let Some(serde_yaml::Value::String(name)) =
                     map.get(serde_yaml::Value::String("name".to_string()))
+                    && name != user_name
                 {
-                    if name != user_name {
-                        anyhow::bail!(
-                            "User name cannot be changed (was: {}, now: {})",
-                            user_name,
-                            name
-                        );
-                    }
+                    anyhow::bail!(
+                        "User name cannot be changed (was: {}, now: {})",
+                        user_name,
+                        name
+                    );
                 }
             }
         }
@@ -290,49 +281,40 @@ pub fn edit_context(context_name: Option<String>) -> Result<()> {
     debug!("Successfully identified edited entries");
     let mut modified_config = load_kube_config()?;
 
-    if let Some(edited_context) = edited_context_value {
-        if let Ok(edited_context_entry) =
+    if let Some(edited_context) = edited_context_value
+        && let Ok(edited_context_entry) =
             serde_yaml::from_value::<crate::config::kubernetes::ContextEntry>(edited_context)
-        {
-            if let Some(index) = modified_config
-                .contexts
-                .iter()
-                .position(|c| c.name == selected_context_name)
-            {
-                modified_config.contexts[index] = edited_context_entry;
-                debug!("Updated context entry in config");
-            }
-        }
+        && let Some(index) = modified_config
+            .contexts
+            .iter()
+            .position(|c| c.name == selected_context_name)
+    {
+        modified_config.contexts[index] = edited_context_entry;
+        debug!("Updated context entry in config");
     }
 
-    if let Some(edited_cluster) = edited_cluster_value {
-        if let Ok(edited_cluster_entry) =
+    if let Some(edited_cluster) = edited_cluster_value
+        && let Ok(edited_cluster_entry) =
             serde_yaml::from_value::<crate::config::kubernetes::ClusterEntry>(edited_cluster)
-        {
-            if let Some(index) = modified_config
-                .clusters
-                .iter()
-                .position(|c| &c.name == cluster_name)
-            {
-                modified_config.clusters[index] = edited_cluster_entry;
-                debug!("Updated cluster entry in config");
-            }
-        }
+        && let Some(index) = modified_config
+            .clusters
+            .iter()
+            .position(|c| &c.name == cluster_name)
+    {
+        modified_config.clusters[index] = edited_cluster_entry;
+        debug!("Updated cluster entry in config");
     }
 
-    if let Some(edited_user) = edited_user_value {
-        if let Ok(edited_user_entry) =
+    if let Some(edited_user) = edited_user_value
+        && let Ok(edited_user_entry) =
             serde_yaml::from_value::<crate::config::kubernetes::UserEntry>(edited_user)
-        {
-            if let Some(index) = modified_config
-                .users
-                .iter()
-                .position(|u| &u.name == user_name)
-            {
-                modified_config.users[index] = edited_user_entry;
-                debug!("Updated user entry in config");
-            }
-        }
+        && let Some(index) = modified_config
+            .users
+            .iter()
+            .position(|u| &u.name == user_name)
+    {
+        modified_config.users[index] = edited_user_entry;
+        debug!("Updated user entry in config");
     }
 
     save_kube_config(&modified_config)?;

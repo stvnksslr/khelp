@@ -5,5 +5,6 @@ pub mod delete;
 pub mod edit;
 pub mod export;
 pub mod list;
+pub mod rename;
 pub mod switch;
 pub mod update;

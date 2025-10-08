@@ -52,6 +52,17 @@ pub enum Commands {
         cleanup: bool,
     },
 
+    /// Rename a context
+    Rename {
+        /// Current name of the context
+        #[arg(value_hint = ValueHint::Other)]
+        old_name: String,
+
+        /// New name for the context
+        #[arg(value_hint = ValueHint::Other)]
+        new_name: String,
+    },
+
     /// Add contexts from an external kubeconfig file
     Add {
         /// Path to the kubeconfig file to import

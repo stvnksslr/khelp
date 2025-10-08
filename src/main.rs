@@ -49,6 +49,10 @@ fn main() -> Result<()> {
             debug!("Executing Delete command");
             commands::delete::delete_context(context_name, force, cleanup)?;
         }
+        Commands::Rename { old_name, new_name } => {
+            debug!("Executing Rename command");
+            commands::rename::rename_context(old_name, new_name)?;
+        }
         Commands::Add {
             file_path,
             rename,
