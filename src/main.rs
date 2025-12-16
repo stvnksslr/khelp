@@ -37,9 +37,9 @@ fn main() -> Result<()> {
             debug!("Executing Edit command");
             commands::edit::edit_context(context_name)?;
         }
-        Commands::Export { context_name } => {
+        Commands::Export { context_names } => {
             debug!("Executing Export command");
-            commands::export::export_context(context_name)?;
+            commands::export::export_contexts(context_names)?;
         }
         Commands::Delete {
             context_name,

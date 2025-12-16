@@ -31,10 +31,11 @@ pub enum Commands {
         context_name: Option<String>,
     },
 
-    /// Export a specific context to stdout (can be redirected to a file)
+    /// Export one or more contexts to stdout (can be redirected to a file)
     Export {
-        #[arg(value_hint = ValueHint::Other)]
-        context_name: Option<String>,
+        /// Names of contexts to export (if none provided, interactive selection)
+        #[arg(value_hint = ValueHint::Other, num_args = 0..)]
+        context_names: Vec<String>,
     },
 
     /// Delete a specific context
