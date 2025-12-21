@@ -15,7 +15,7 @@ A user-friendly CLI tool to manage Kubernetes contexts with ease.
 - 🗑️ **Delete** contexts with optional cleanup of orphaned resources
 - ➕ **Add** contexts from external kubeconfig files
 - 🔄 **Update** to the latest version using built-in self-update
-- 🛠️ **Shell Completions** for bash, zsh, and fish
+- 🛠️ **Shell Completions** for bash, zsh, fish, and PowerShell
 
 ## Installation
 
@@ -30,6 +30,16 @@ curl https://files.stvnksslr.com/khelp/install.sh | bash
 ```bash
 cargo install khelp
 ```
+
+### Windows
+
+#### Using Cargo
+```powershell
+cargo install khelp
+```
+
+#### Manual Download
+Download the latest `.zip` file for Windows from [Releases](https://github.com/stvnksslr/khelp/releases), extract it, and add the directory containing `khelp.exe` to your PATH.
 
 ## Usage
 

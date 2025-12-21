@@ -4,7 +4,6 @@ use dialoguer::{Select, theme::ColorfulTheme};
 use log::{debug, info};
 use std::env;
 use std::fs;
-use std::os::unix::process::ExitStatusExt;
 use std::process::Command;
 use tempfile;
 
@@ -179,18 +178,24 @@ pub fn edit_context(context_name: Option<String>) -> Result<()> {
         cmd.arg(&temp_file_path);
         let _ = cmd.spawn()?;
 
-        println!("VS Code has been launched. Press Enter when you've finished editing.");
+        println!("Editor has been launched. Press Enter when you've finished editing.");
         let mut input = String::new();
         std::io::stdin().read_line(&mut input)?;
-        std::process::ExitStatus::from_raw(0)
+        None // GUI editors don't return a meaningful exit status
     } else {
-        Command::new(&editor)
-            .arg(&temp_file_path)
-            .status()
-            .with_context(|| format!("Failed to open editor for {}", temp_file_path.display()))?
+        Some(
+            Command::new(&editor)
+                .arg(&temp_file_path)
+                .status()
+                .with_context(|| {
+                    format!("Failed to open editor for {}", temp_file_path.display())
+                })?,
+        )
     };
 
-    if !status.success() {
+    if let Some(s) = status
+        && !s.success()
+    {
         anyhow::bail!("Editor exited with non-zero status code");
     }
 
