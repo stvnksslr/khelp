@@ -192,3 +192,32 @@ impl Default for TestKubeConfig {
         Self::new()
     }
 }
+
+impl TestKubeConfig {
+    /// Creates a test fixture with an empty config file
+    #[allow(dead_code)]
+    pub fn empty() -> Self {
+        let temp_dir = TempDir::new().expect("Failed to create temp directory");
+        let config_path = temp_dir.path().join("config");
+
+        fs::write(&config_path, "").expect("Failed to write empty config");
+
+        Self {
+            temp_dir,
+            config_path,
+        }
+    }
+
+    /// Creates a test fixture with no config file (path exists but file does not)
+    #[allow(dead_code)]
+    pub fn nonexistent() -> Self {
+        let temp_dir = TempDir::new().expect("Failed to create temp directory");
+        let config_path = temp_dir.path().join("config");
+        // Don't create the file
+
+        Self {
+            temp_dir,
+            config_path,
+        }
+    }
+}

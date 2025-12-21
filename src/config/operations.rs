@@ -386,4 +386,47 @@ preferences: {}
             error_msg
         );
     }
+
+    #[test]
+    fn test_kubeconfig_default() {
+        let config = KubeConfig::default();
+
+        assert_eq!(config.api_version, "v1");
+        assert_eq!(config.kind, "Config");
+        assert!(config.clusters.is_empty());
+        assert!(config.contexts.is_empty());
+        assert!(config.users.is_empty());
+        assert!(config.current_context.is_empty());
+    }
+
+    #[test]
+    fn test_default_config_serializes_correctly() {
+        let config = KubeConfig::default();
+        let yaml = serde_yaml::to_string(&config).expect("Failed to serialize default config");
+
+        assert!(yaml.contains("apiVersion: v1"));
+        assert!(yaml.contains("kind: Config"));
+
+        // Verify it can be parsed back
+        let parsed: KubeConfig =
+            serde_yaml::from_str(&yaml).expect("Failed to parse serialized default config");
+        assert_eq!(parsed.api_version, "v1");
+        assert_eq!(parsed.kind, "Config");
+    }
+
+    #[test]
+    fn test_save_default_config_to_file() {
+        let temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        let config = KubeConfig::default();
+
+        save_kube_config_to(&config, temp_file.path()).expect("Failed to save default config");
+
+        // Verify the file was written and can be loaded back
+        let loaded = load_kube_config_from(temp_file.path()).expect("Failed to load saved config");
+        assert_eq!(loaded.api_version, "v1");
+        assert_eq!(loaded.kind, "Config");
+        assert!(loaded.clusters.is_empty());
+        assert!(loaded.contexts.is_empty());
+        assert!(loaded.users.is_empty());
+    }
 }
