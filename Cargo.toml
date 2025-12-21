@@ -1,6 +1,6 @@
 [package]
 name = "khelp"
-version = "0.1.11"
+version = "0.1.12"
 edition = "2024"
 description = "A tool for managing kubernetes contexts"
 repository = "https://github.com/stvnksslr/khelp"
