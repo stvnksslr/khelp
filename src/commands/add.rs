@@ -6,7 +6,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use crate::config::kubernetes::{ContextEntry, KubeConfig};
-use crate::config::operations::{load_kube_config, save_kube_config};
+use crate::config::operations::{load_kube_config_or_default, save_kube_config};
 
 #[derive(Debug)]
 pub struct ImportSummary {
@@ -146,8 +146,38 @@ pub fn add_context(file_path: PathBuf, rename: bool, overwrite: bool, switch: bo
     let external_config_content = fs::read_to_string(&file_path)
         .with_context(|| format!("Failed to read file: {}", file_path.display()))?;
 
+    // Check for empty file
+    let trimmed = external_config_content.trim();
+    if trimmed.is_empty() {
+        anyhow::bail!(
+            "Config file is empty: {}\n\nThe kubeconfig file you're trying to add contains no data.",
+            file_path.display()
+        );
+    }
+
     let mut external_config: KubeConfig = serde_yaml::from_str(&external_config_content)
-        .context("Failed to parse external kubeconfig YAML")?;
+        .map_err(|e| {
+            let error_msg = e.to_string();
+            if error_msg.contains("missing field `apiVersion`") || error_msg.contains("missing field `kind`") {
+                anyhow::anyhow!(
+                    "Invalid kubeconfig file: {}\n\nThe file appears to be missing required fields (apiVersion, kind).\n\nOriginal error: {}",
+                    file_path.display(),
+                    error_msg
+                )
+            } else if error_msg.contains("missing field") {
+                anyhow::anyhow!(
+                    "Invalid kubeconfig file: {}\n\n{}\n\nPlease check that your kubeconfig file has all required fields.",
+                    file_path.display(),
+                    error_msg
+                )
+            } else {
+                anyhow::anyhow!(
+                    "Failed to parse kubeconfig file: {}\n\n{}",
+                    file_path.display(),
+                    error_msg
+                )
+            }
+        })?;
 
     debug!(
         "External config loaded: {} contexts, {} clusters, {} users",
@@ -196,8 +226,8 @@ pub fn add_context(file_path: PathBuf, rename: bool, overwrite: bool, switch: bo
         anyhow::bail!("External kubeconfig contains no contexts, clusters, or users to import");
     }
 
-    // Load main config
-    let mut main_config = load_kube_config()?;
+    // Load main config (or create empty one if it doesn't exist or is empty)
+    let mut main_config = load_kube_config_or_default()?;
     debug!(
         "Main config loaded: {} contexts, {} clusters, {} users",
         main_config.contexts.len(),

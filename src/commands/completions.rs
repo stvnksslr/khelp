@@ -169,9 +169,92 @@ pub fn generate_completions(shell: Shell, install: bool) -> Result<()> {
                     "complete -c khelp -f -n \"__fish_seen_subcommand_from completions\" -a \"bash zsh fish powershell elvish\" -d \"Shell\""
                 );
             }
+            Shell::PowerShell => {
+                // PowerShell completions
+                println!("# PowerShell completions for khelp");
+                println!("# Add this to your PowerShell profile ($PROFILE)");
+                println!();
+                println!("Register-ArgumentCompleter -Native -CommandName khelp -ScriptBlock {{");
+                println!("    param($wordToComplete, $commandAst, $cursorPosition)");
+                println!();
+                println!("    $commands = @(");
+                println!(
+                    "        @{{ Name = 'list'; Description = 'List all available contexts' }}"
+                );
+                println!(
+                    "        @{{ Name = 'current'; Description = 'Get the current context' }}"
+                );
+                println!(
+                    "        @{{ Name = 'switch'; Description = 'Switch to a different context' }}"
+                );
+                println!("        @{{ Name = 'edit'; Description = 'Edit a specific context' }}");
+                println!(
+                    "        @{{ Name = 'export'; Description = 'Export a specific context to stdout' }}"
+                );
+                println!(
+                    "        @{{ Name = 'delete'; Description = 'Delete a specific context' }}"
+                );
+                println!("        @{{ Name = 'rename'; Description = 'Rename a context' }}");
+                println!(
+                    "        @{{ Name = 'add'; Description = 'Add contexts from an external kubeconfig file' }}"
+                );
+                println!(
+                    "        @{{ Name = 'completions'; Description = 'Generate shell completions' }}"
+                );
+                println!(
+                    "        @{{ Name = 'update'; Description = 'Check for updates to khelp' }}"
+                );
+                println!("    )");
+                println!();
+                println!("    $elements = $commandAst.CommandElements");
+                println!("    $command = $elements[1].Value");
+                println!();
+                println!("    # Complete subcommands");
+                println!(
+                    "    if ($elements.Count -eq 1 -or ($elements.Count -eq 2 -and $wordToComplete)) {{"
+                );
+                println!(
+                    "        $commands | Where-Object {{ $_.Name -like \"$wordToComplete*\" }} | ForEach-Object {{"
+                );
+                println!(
+                    "            [System.Management.Automation.CompletionResult]::new($_.Name, $_.Name, 'ParameterValue', $_.Description)"
+                );
+                println!("        }}");
+                println!("        return");
+                println!("    }}");
+                println!();
+                println!("    # Complete context names for relevant commands");
+                println!(
+                    "    if ($command -in @('switch', 'edit', 'export', 'delete', 'rename')) {{"
+                );
+                println!("        $contexts = kubectl config get-contexts -o name 2>$null");
+                println!("        if ($contexts) {{");
+                println!(
+                    "            $contexts | Where-Object {{ $_ -like \"$wordToComplete*\" }} | ForEach-Object {{"
+                );
+                println!(
+                    "                [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', \"Kubernetes context\")"
+                );
+                println!("            }}");
+                println!("        }}");
+                println!("        return");
+                println!("    }}");
+                println!();
+                println!("    # Complete shells for completions command");
+                println!("    if ($command -eq 'completions') {{");
+                println!(
+                    "        @('bash', 'zsh', 'fish', 'powershell', 'elvish') | Where-Object {{ $_ -like \"$wordToComplete*\" }} | ForEach-Object {{"
+                );
+                println!(
+                    "            [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', \"Shell\")"
+                );
+                println!("        }}");
+                println!("    }}");
+                println!("}}");
+            }
             _ => {
                 println!("# Completions not supported for this shell");
-                println!("# Supported shells: bash, zsh, fish");
+                println!("# Supported shells: bash, zsh, fish, powershell");
             }
         }
     }
@@ -183,25 +266,46 @@ pub fn generate_completions(shell: Shell, install: bool) -> Result<()> {
 }
 
 /// Detect the current shell
+///
+/// On Unix systems, this checks the $SHELL environment variable.
+/// On Windows, this checks for PowerShell via PSModulePath environment variable.
 pub fn detect_shell() -> Result<Shell> {
-    let shell_path = env::var("SHELL").context("$SHELL environment variable not set")?;
-    let path = PathBuf::from(shell_path);
-    let shell_name = path
-        .file_name()
-        .and_then(|os_str| os_str.to_str())
-        .context("Invalid shell path")?;
-
-    debug!("Detected shell: {}", shell_name);
-
-    match shell_name {
-        "bash" => Ok(Shell::Bash),
-        "zsh" => Ok(Shell::Zsh),
-        "fish" => Ok(Shell::Fish),
-        _ => anyhow::bail!(
-            "Unsupported shell: {}. Please specify a supported shell (bash, zsh, fish)",
-            shell_name
-        ),
+    // Try $SHELL first (Unix systems and some Windows terminals like Git Bash)
+    if let Ok(shell_path) = env::var("SHELL") {
+        let path = PathBuf::from(&shell_path);
+        if let Some(shell_name) = path.file_name().and_then(|s| s.to_str()) {
+            debug!("Detected shell from $SHELL: {}", shell_name);
+            return match shell_name {
+                "bash" => Ok(Shell::Bash),
+                "zsh" => Ok(Shell::Zsh),
+                "fish" => Ok(Shell::Fish),
+                "pwsh" | "powershell" => Ok(Shell::PowerShell),
+                _ => anyhow::bail!(
+                    "Unsupported shell: {}. Please specify a supported shell (bash, zsh, fish, powershell)",
+                    shell_name
+                ),
+            };
+        }
     }
+
+    // Windows: Check for PowerShell via PSModulePath environment variable
+    if env::var("PSModulePath").is_ok() {
+        debug!("Detected PowerShell via PSModulePath environment variable");
+        return Ok(Shell::PowerShell);
+    }
+
+    // Windows: Check if running in cmd.exe
+    if let Ok(comspec) = env::var("COMSPEC")
+        && comspec.to_lowercase().contains("cmd.exe")
+    {
+        anyhow::bail!(
+            "cmd.exe does not support tab completions. Please use PowerShell instead, or specify a shell explicitly."
+        );
+    }
+
+    anyhow::bail!(
+        "Could not detect shell. Please specify a shell explicitly (bash, zsh, fish, powershell)"
+    )
 }
 
 /// Install completions for the specified shell
@@ -211,7 +315,11 @@ fn install_completions(shell: Shell) -> Result<()> {
         shell
     );
 
-    let shell = if shell == Shell::Bash || shell == Shell::Zsh || shell == Shell::Fish {
+    let shell = if shell == Shell::Bash
+        || shell == Shell::Zsh
+        || shell == Shell::Fish
+        || shell == Shell::PowerShell
+    {
         debug!("Shell {:?} is directly supported", shell);
         shell
     } else {
@@ -239,6 +347,10 @@ fn install_completions(shell: Shell) -> Result<()> {
         Shell::Fish => {
             debug!("Installing Fish completions");
             install_fish_completions()
+        }
+        Shell::PowerShell => {
+            debug!("Installing PowerShell completions");
+            install_powershell_completions()
         }
         _ => {
             debug!("Unsupported shell: {:?}", shell);
@@ -519,6 +631,126 @@ complete -c khelp -f -n "__fish_seen_subcommand_from completions" -a "bash zsh f
             .bold()
     );
     println!("Fish will automatically load the completions for new sessions.");
+
+    Ok(())
+}
+
+/// Install PowerShell completions
+fn install_powershell_completions() -> Result<()> {
+    info!("Installing PowerShell completions for khelp...");
+
+    // Determine the PowerShell profile path based on platform
+    let profile_dir = if cfg!(target_os = "windows") {
+        // Windows: Use Documents\PowerShell for PowerShell 7+ or Documents\WindowsPowerShell for 5.x
+        dirs::document_dir()
+            .context("Could not find Documents directory")?
+            .join("PowerShell")
+    } else {
+        // Unix: PowerShell Core uses ~/.config/powershell
+        dirs::config_dir()
+            .context("Could not find config directory")?
+            .join("powershell")
+    };
+
+    debug!("PowerShell profile directory: {}", profile_dir.display());
+
+    // Create the profile directory if it doesn't exist
+    fs::create_dir_all(&profile_dir).context("Failed to create PowerShell profile directory")?;
+
+    // Generate the completion script content
+    let content = r#"# khelp PowerShell completions
+# Generated by khelp completions --install
+
+Register-ArgumentCompleter -Native -CommandName khelp -ScriptBlock {
+    param($wordToComplete, $commandAst, $cursorPosition)
+
+    $commands = @(
+        @{ Name = 'list'; Description = 'List all available contexts' }
+        @{ Name = 'current'; Description = 'Get the current context' }
+        @{ Name = 'switch'; Description = 'Switch to a different context' }
+        @{ Name = 'edit'; Description = 'Edit a specific context' }
+        @{ Name = 'export'; Description = 'Export a specific context to stdout' }
+        @{ Name = 'delete'; Description = 'Delete a specific context' }
+        @{ Name = 'rename'; Description = 'Rename a context' }
+        @{ Name = 'add'; Description = 'Add contexts from an external kubeconfig file' }
+        @{ Name = 'completions'; Description = 'Generate shell completions' }
+        @{ Name = 'update'; Description = 'Check for updates to khelp' }
+    )
+
+    $elements = $commandAst.CommandElements
+    $command = if ($elements.Count -gt 1) { $elements[1].Value } else { $null }
+
+    # Complete subcommands
+    if ($elements.Count -eq 1 -or ($elements.Count -eq 2 -and $wordToComplete)) {
+        $commands | Where-Object { $_.Name -like "$wordToComplete*" } | ForEach-Object {
+            [System.Management.Automation.CompletionResult]::new($_.Name, $_.Name, 'ParameterValue', $_.Description)
+        }
+        return
+    }
+
+    # Complete context names for relevant commands
+    if ($command -in @('switch', 'edit', 'export', 'delete', 'rename')) {
+        $contexts = kubectl config get-contexts -o name 2>$null
+        if ($contexts) {
+            $contexts | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
+                [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', "Kubernetes context")
+            }
+        }
+        return
+    }
+
+    # Complete shells for completions command
+    if ($command -eq 'completions') {
+        @('bash', 'zsh', 'fish', 'powershell', 'elvish') | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
+            [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', "Shell")
+        }
+    }
+}
+"#;
+
+    // Write the completion script to a separate file
+    let completions_file = profile_dir.join("khelp_completions.ps1");
+    debug!(
+        "Writing completion script to: {}",
+        completions_file.display()
+    );
+    fs::write(&completions_file, content)
+        .context("Failed to write PowerShell completion script")?;
+
+    // Update the PowerShell profile to source the completions
+    let profile_path = profile_dir.join("Microsoft.PowerShell_profile.ps1");
+    let source_line = format!(". \"{}\"", completions_file.display());
+
+    // Check if the profile exists and if it already sources our completions
+    let should_update = if let Ok(profile_content) = fs::read_to_string(&profile_path) {
+        !profile_content.contains("khelp_completions.ps1")
+    } else {
+        true
+    };
+
+    if should_update {
+        let mut profile_file = fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&profile_path)
+            .context("Failed to open PowerShell profile")?;
+
+        writeln!(profile_file, "\n# khelp completions")?;
+        writeln!(profile_file, "{}", source_line)?;
+        debug!("Added source line to PowerShell profile");
+    }
+
+    println!(
+        "{}",
+        style("PowerShell completions installed successfully!")
+            .green()
+            .bold()
+    );
+    println!("Completions will be loaded automatically in new PowerShell sessions.");
+    println!(
+        "To enable in current session, run: . \"{}\"",
+        completions_file.display()
+    );
 
     Ok(())
 }

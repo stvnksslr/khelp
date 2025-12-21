@@ -1,5 +1,6 @@
 mod common;
 
+use khelp::config::kubernetes::KubeConfig;
 use khelp::config::operations::{load_kube_config_from, save_kube_config_to};
 
 #[test]
@@ -300,4 +301,141 @@ fn test_isolation_delete_doesnt_affect_other_instance() {
     let config2 = load_kube_config_from(test_config2.path()).expect("Failed to load config2");
     assert_eq!(config2.contexts.len(), 2);
     assert!(config2.contexts.iter().any(|c| c.name == "ctx2"));
+}
+
+#[test]
+fn test_add_to_empty_config() {
+    // Create an empty config
+    let test_config = common::TestKubeConfig::empty();
+
+    // Create an external config to add (keep temp in scope)
+    let external_temp = common::TestKubeConfig::with_single_context("external");
+    let external_path = external_temp.create_external_config("external");
+
+    // Loading empty config should fail
+    let load_result = load_kube_config_from(test_config.path());
+    assert!(load_result.is_err(), "Should fail to load empty config");
+    let error_msg = load_result.unwrap_err().to_string();
+    assert!(
+        error_msg.contains("Config file is empty"),
+        "Error should mention empty config: {}",
+        error_msg
+    );
+
+    // But we can use a default config and save external content to it
+    let external_config =
+        load_kube_config_from(&external_path).expect("Failed to load external config");
+
+    // Start with default config and merge external
+    let mut main_config = KubeConfig::default();
+    for context in external_config.contexts {
+        main_config.contexts.push(context);
+    }
+    for cluster in external_config.clusters {
+        main_config.clusters.push(cluster);
+    }
+    for user in external_config.users {
+        main_config.users.push(user);
+    }
+    if !main_config.contexts.is_empty() {
+        main_config.current_context = main_config.contexts[0].name.clone();
+    }
+
+    save_kube_config_to(&main_config, test_config.path()).expect("Failed to save config");
+
+    // Verify the config can now be loaded
+    let loaded = load_kube_config_from(test_config.path()).expect("Failed to load saved config");
+    assert_eq!(loaded.contexts.len(), 1);
+    assert_eq!(loaded.contexts[0].name, "external");
+    assert_eq!(loaded.current_context, "external");
+}
+
+#[test]
+fn test_empty_config_error_message() {
+    let test_config = common::TestKubeConfig::empty();
+
+    let result = load_kube_config_from(test_config.path());
+    assert!(result.is_err());
+
+    let error_msg = result.unwrap_err().to_string();
+    assert!(error_msg.contains("Config file is empty"));
+    assert!(error_msg.contains("apiVersion"));
+    assert!(error_msg.contains("kind"));
+}
+
+#[test]
+fn test_whitespace_only_config_error_message() {
+    let test_config = common::TestKubeConfig::with_content("   \n\n  \t  \n");
+
+    let result = load_kube_config_from(test_config.path());
+    assert!(result.is_err());
+
+    let error_msg = result.unwrap_err().to_string();
+    assert!(
+        error_msg.contains("Config file is empty"),
+        "Whitespace-only should be treated as empty: {}",
+        error_msg
+    );
+}
+
+#[test]
+fn test_missing_api_version_error_message() {
+    let invalid_config = r#"kind: Config
+clusters: []
+contexts: []
+users: []
+current-context: ""
+preferences: {}
+"#;
+    let test_config = common::TestKubeConfig::with_content(invalid_config);
+
+    let result = load_kube_config_from(test_config.path());
+    assert!(result.is_err());
+
+    let error_msg = result.unwrap_err().to_string();
+    assert!(
+        error_msg.contains("Invalid kubeconfig file"),
+        "Error should indicate invalid kubeconfig: {}",
+        error_msg
+    );
+    assert!(
+        error_msg.contains("apiVersion"),
+        "Error should mention apiVersion: {}",
+        error_msg
+    );
+}
+
+#[test]
+fn test_default_kubeconfig_is_valid() {
+    let config = KubeConfig::default();
+
+    assert_eq!(config.api_version, "v1");
+    assert_eq!(config.kind, "Config");
+    assert!(config.clusters.is_empty());
+    assert!(config.contexts.is_empty());
+    assert!(config.users.is_empty());
+    assert!(config.current_context.is_empty());
+
+    // Verify it can be serialized and deserialized
+    let yaml = serde_yaml::to_string(&config).expect("Failed to serialize");
+    let parsed: KubeConfig = serde_yaml::from_str(&yaml).expect("Failed to deserialize");
+    assert_eq!(parsed.api_version, config.api_version);
+    assert_eq!(parsed.kind, config.kind);
+}
+
+#[test]
+fn test_save_and_load_default_config() {
+    let test_config = common::TestKubeConfig::empty();
+
+    // Save a default config to the empty file
+    let config = KubeConfig::default();
+    save_kube_config_to(&config, test_config.path()).expect("Failed to save default config");
+
+    // Verify it can be loaded
+    let loaded = load_kube_config_from(test_config.path()).expect("Failed to load config");
+    assert_eq!(loaded.api_version, "v1");
+    assert_eq!(loaded.kind, "Config");
+    assert!(loaded.clusters.is_empty());
+    assert!(loaded.contexts.is_empty());
+    assert!(loaded.users.is_empty());
 }
