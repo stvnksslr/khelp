@@ -42,8 +42,38 @@ pub fn load_kube_config_from(path: &Path) -> Result<KubeConfig> {
     let config_content = fs::read_to_string(path)
         .with_context(|| format!("Failed to read config file: {}", path.display()))?;
 
-    let config: KubeConfig =
-        serde_yaml::from_str(&config_content).context("Failed to parse Kubernetes config YAML")?;
+    // Check for empty or whitespace-only content
+    let trimmed = config_content.trim();
+    if trimmed.is_empty() {
+        anyhow::bail!(
+            "Config file is empty: {}\n\nA valid kubeconfig file must contain at least:\n  apiVersion: v1\n  kind: Config\n  clusters: []\n  contexts: []\n  users: []\n  current-context: \"\"",
+            path.display()
+        );
+    }
+
+    // Provide more helpful error messages for common issues
+    let config: KubeConfig = serde_yaml::from_str(&config_content).map_err(|e| {
+        let error_msg = e.to_string();
+        if error_msg.contains("missing field `apiVersion`") || error_msg.contains("missing field `kind`") {
+            anyhow::anyhow!(
+                "Invalid kubeconfig file: {}\n\nThe file appears to be missing required fields. A valid kubeconfig must include:\n  - apiVersion: v1\n  - kind: Config\n  - clusters, contexts, users arrays\n  - current-context\n\nOriginal error: {}",
+                path.display(),
+                error_msg
+            )
+        } else if error_msg.contains("missing field") {
+            anyhow::anyhow!(
+                "Invalid kubeconfig file: {}\n\n{}\n\nPlease check that your kubeconfig file has all required fields.",
+                path.display(),
+                error_msg
+            )
+        } else {
+            anyhow::anyhow!(
+                "Failed to parse kubeconfig file: {}\n\n{}",
+                path.display(),
+                error_msg
+            )
+        }
+    })?;
 
     debug!(
         "Kubernetes config loaded successfully with {} contexts",
@@ -52,14 +82,51 @@ pub fn load_kube_config_from(path: &Path) -> Result<KubeConfig> {
     Ok(config)
 }
 
+/// Loads the Kubernetes config from the default location, or returns an empty config
+/// if the file is empty or missing. This is useful for commands that need to initialize
+/// a new config (like `add`).
+pub fn load_kube_config_or_default() -> Result<KubeConfig> {
+    match load_kube_config() {
+        Ok(config) => Ok(config),
+        Err(e) => {
+            let error_msg = e.to_string();
+            // If config is empty or missing required fields, return a default empty config
+            if error_msg.contains("Config file is empty")
+                || error_msg.contains("missing required fields")
+                || error_msg.contains("Kubernetes config file not found")
+            {
+                debug!("Main config is empty or not found, using empty default config");
+                Ok(KubeConfig::default())
+            } else {
+                Err(e)
+            }
+        }
+    }
+}
+
 /// Saves the Kubernetes config to the default location
 ///
 /// # Arguments
 ///
 /// * `config` - The Kubernetes configuration to save
 pub fn save_kube_config(config: &KubeConfig) -> Result<()> {
-    let kube_config_path = get_kube_config_path()?;
+    let kube_config_path = get_kube_config_path_or_create()?;
     save_kube_config_to(config, &kube_config_path)
+}
+
+/// Gets the path to the Kubernetes config file, creating the .kube directory if needed
+pub fn get_kube_config_path_or_create() -> Result<PathBuf> {
+    let home = home_dir().context("Could not find home directory")?;
+    let kube_dir = home.join(".kube");
+
+    // Create the .kube directory if it doesn't exist
+    if !kube_dir.exists() {
+        std::fs::create_dir_all(&kube_dir)
+            .with_context(|| format!("Failed to create directory: {}", kube_dir.display()))?;
+        debug!("Created .kube directory: {}", kube_dir.display());
+    }
+
+    Ok(kube_dir.join("config"))
 }
 
 /// Saves the Kubernetes config to a custom path
@@ -155,8 +222,74 @@ users:
         assert!(result.is_err(), "Should fail for invalid YAML");
         let error_msg = result.unwrap_err().to_string();
         assert!(
-            error_msg.contains("Failed to parse Kubernetes config YAML"),
-            "Error should mention YAML parse failure: {}",
+            error_msg.contains("Failed to parse kubeconfig file"),
+            "Error should mention parse failure: {}",
+            error_msg
+        );
+    }
+
+    #[test]
+    fn test_load_kube_config_from_empty_file() {
+        let temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        std::fs::write(temp_file.path(), "").expect("Failed to write to temp file");
+
+        let result = load_kube_config_from(temp_file.path());
+        assert!(result.is_err(), "Should fail for empty file");
+        let error_msg = result.unwrap_err().to_string();
+        assert!(
+            error_msg.contains("Config file is empty"),
+            "Error should mention empty file: {}",
+            error_msg
+        );
+        assert!(
+            error_msg.contains("apiVersion"),
+            "Error should provide guidance on required fields: {}",
+            error_msg
+        );
+    }
+
+    #[test]
+    fn test_load_kube_config_from_whitespace_only() {
+        let temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        std::fs::write(temp_file.path(), "   \n\n  \t  \n").expect("Failed to write to temp file");
+
+        let result = load_kube_config_from(temp_file.path());
+        assert!(result.is_err(), "Should fail for whitespace-only file");
+        let error_msg = result.unwrap_err().to_string();
+        assert!(
+            error_msg.contains("Config file is empty"),
+            "Error should mention empty file: {}",
+            error_msg
+        );
+    }
+
+    #[test]
+    fn test_load_kube_config_missing_api_version() {
+        let temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        // Valid YAML but missing apiVersion
+        std::fs::write(
+            temp_file.path(),
+            r#"kind: Config
+clusters: []
+contexts: []
+users: []
+current-context: ""
+preferences: {}
+"#,
+        )
+        .expect("Failed to write to temp file");
+
+        let result = load_kube_config_from(temp_file.path());
+        assert!(result.is_err(), "Should fail for missing apiVersion");
+        let error_msg = result.unwrap_err().to_string();
+        assert!(
+            error_msg.contains("Invalid kubeconfig file"),
+            "Error should indicate invalid kubeconfig: {}",
+            error_msg
+        );
+        assert!(
+            error_msg.contains("apiVersion"),
+            "Error should mention apiVersion: {}",
             error_msg
         );
     }

@@ -13,6 +13,20 @@ pub struct KubeConfig {
     pub users: Vec<UserEntry>,
 }
 
+impl Default for KubeConfig {
+    fn default() -> Self {
+        Self {
+            api_version: "v1".to_string(),
+            clusters: Vec::new(),
+            contexts: Vec::new(),
+            current_context: String::new(),
+            kind: "Config".to_string(),
+            preferences: Preferences {},
+            users: Vec::new(),
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ClusterEntry {
     pub cluster: ClusterData,
