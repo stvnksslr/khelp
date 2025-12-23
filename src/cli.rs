@@ -38,7 +38,7 @@ pub enum Commands {
         context_names: Vec<String>,
     },
 
-    /// Delete a specific context
+    /// Delete a specific context (also removes orphaned cluster and user)
     Delete {
         /// Name of the context to delete
         #[arg(value_hint = ValueHint::Other)]
@@ -47,10 +47,13 @@ pub enum Commands {
         /// Skip confirmation prompt
         #[arg(long)]
         force: bool,
+    },
 
-        /// Also delete orphaned clusters and users
+    /// Clean up orphaned clusters and users not referenced by any context
+    Cleanup {
+        /// Skip confirmation prompt
         #[arg(long)]
-        cleanup: bool,
+        force: bool,
     },
 
     /// Rename a context

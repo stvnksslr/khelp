@@ -10,8 +10,8 @@ use crate::config::operations::{load_kube_config, save_kube_config};
 ///
 /// If context_name is provided, deletes that context directly.
 /// Otherwise, presents an interactive menu to select a context.
-/// Optionally cleans up orphaned clusters and users.
-pub fn delete_context(context_name: Option<String>, force: bool, cleanup: bool) -> Result<()> {
+/// Always cleans up the associated cluster and user if they become orphaned.
+pub fn delete_context(context_name: Option<String>, force: bool) -> Result<()> {
     let mut config = load_kube_config()?;
     debug!("Loaded kube config with {} contexts", config.contexts.len());
 
@@ -136,54 +136,52 @@ pub fn delete_context(context_name: Option<String>, force: bool, cleanup: bool) 
         style(&selected_context_name).green().bold()
     );
 
-    // Optional cleanup of orphaned clusters and users
-    if cleanup {
-        let mut deleted_clusters = Vec::new();
-        let mut deleted_users = Vec::new();
+    // Clean up associated cluster and user if they become orphaned
+    let mut deleted_clusters = Vec::new();
+    let mut deleted_users = Vec::new();
 
-        // Find referenced clusters and users
-        let referenced_clusters: HashSet<String> = config
-            .contexts
-            .iter()
-            .map(|c| c.context.cluster.clone())
-            .collect();
+    // Find referenced clusters and users
+    let referenced_clusters: HashSet<String> = config
+        .contexts
+        .iter()
+        .map(|c| c.context.cluster.clone())
+        .collect();
 
-        let referenced_users: HashSet<String> = config
-            .contexts
-            .iter()
-            .map(|c| c.context.user.clone())
-            .collect();
+    let referenced_users: HashSet<String> = config
+        .contexts
+        .iter()
+        .map(|c| c.context.user.clone())
+        .collect();
 
-        // Delete orphaned cluster
-        if !referenced_clusters.contains(&cluster_name) {
-            config.clusters.retain(|c| c.name != cluster_name);
-            deleted_clusters.push(cluster_name);
-            debug!("Removed orphaned cluster");
-        }
+    // Delete orphaned cluster
+    if !referenced_clusters.contains(&cluster_name) {
+        config.clusters.retain(|c| c.name != cluster_name);
+        deleted_clusters.push(cluster_name);
+        debug!("Removed orphaned cluster");
+    }
 
-        // Delete orphaned user
-        if !referenced_users.contains(&user_name) {
-            config.users.retain(|u| u.name != user_name);
-            deleted_users.push(user_name);
-            debug!("Removed orphaned user");
-        }
+    // Delete orphaned user
+    if !referenced_users.contains(&user_name) {
+        config.users.retain(|u| u.name != user_name);
+        deleted_users.push(user_name);
+        debug!("Removed orphaned user");
+    }
 
-        // Report cleanup results
-        for cluster in deleted_clusters {
-            info!(
-                "{} Deleted orphaned cluster: {}",
-                style("✓").green(),
-                style(&cluster).cyan()
-            );
-        }
+    // Report cleanup results
+    for cluster in deleted_clusters {
+        info!(
+            "{} Deleted cluster: {}",
+            style("✓").green(),
+            style(&cluster).cyan()
+        );
+    }
 
-        for user in deleted_users {
-            info!(
-                "{} Deleted orphaned user: {}",
-                style("✓").green(),
-                style(&user).cyan()
-            );
-        }
+    for user in deleted_users {
+        info!(
+            "{} Deleted user: {}",
+            style("✓").green(),
+            style(&user).cyan()
+        );
     }
 
     // Save the config

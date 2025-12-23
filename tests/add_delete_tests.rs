@@ -379,30 +379,21 @@ fn test_whitespace_only_config_error_message() {
 }
 
 #[test]
-fn test_missing_api_version_error_message() {
-    let invalid_config = r#"kind: Config
+fn test_missing_api_version_uses_default() {
+    let config_without_api_version = r#"kind: Config
 clusters: []
 contexts: []
 users: []
 current-context: ""
 preferences: {}
 "#;
-    let test_config = common::TestKubeConfig::with_content(invalid_config);
+    let test_config = common::TestKubeConfig::with_content(config_without_api_version);
 
     let result = load_kube_config_from(test_config.path());
-    assert!(result.is_err());
+    assert!(result.is_ok(), "Should succeed with default apiVersion");
 
-    let error_msg = result.unwrap_err().to_string();
-    assert!(
-        error_msg.contains("Invalid kubeconfig file"),
-        "Error should indicate invalid kubeconfig: {}",
-        error_msg
-    );
-    assert!(
-        error_msg.contains("apiVersion"),
-        "Error should mention apiVersion: {}",
-        error_msg
-    );
+    let config = result.unwrap();
+    assert_eq!(config.api_version, "v1", "Should default to v1");
 }
 
 #[test]

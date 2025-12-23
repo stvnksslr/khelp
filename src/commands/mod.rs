@@ -1,4 +1,5 @@
 pub mod add;
+pub mod cleanup;
 pub mod completions;
 pub mod current;
 pub mod delete;

@@ -44,10 +44,13 @@ fn main() -> Result<()> {
         Commands::Delete {
             context_name,
             force,
-            cleanup,
         } => {
             debug!("Executing Delete command");
-            commands::delete::delete_context(context_name, force, cleanup)?;
+            commands::delete::delete_context(context_name, force)?;
+        }
+        Commands::Cleanup { force } => {
+            debug!("Executing Cleanup command");
+            commands::cleanup::cleanup_orphans(force)?;
         }
         Commands::Rename { old_name, new_name } => {
             debug!("Executing Rename command");

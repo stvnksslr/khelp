@@ -1,15 +1,28 @@
 use serde::{Deserialize, Serialize};
 
+fn default_api_version() -> String {
+    "v1".to_string()
+}
+
+fn default_kind() -> String {
+    "Config".to_string()
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct KubeConfig {
-    #[serde(rename = "apiVersion")]
+    #[serde(rename = "apiVersion", default = "default_api_version")]
     pub api_version: String,
+    #[serde(default)]
     pub clusters: Vec<ClusterEntry>,
+    #[serde(default)]
     pub contexts: Vec<ContextEntry>,
-    #[serde(rename = "current-context")]
+    #[serde(rename = "current-context", default)]
     pub current_context: String,
+    #[serde(default = "default_kind")]
     pub kind: String,
-    pub preferences: Preferences,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub preferences: Option<Preferences>,
+    #[serde(default)]
     pub users: Vec<UserEntry>,
 }
 
@@ -21,7 +34,7 @@ impl Default for KubeConfig {
             contexts: Vec::new(),
             current_context: String::new(),
             kind: "Config".to_string(),
-            preferences: Preferences {},
+            preferences: Some(Preferences {}),
             users: Vec::new(),
         }
     }
@@ -33,7 +46,7 @@ pub struct ClusterEntry {
     pub name: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct ClusterData {
     #[serde(
         rename = "certificate-authority-data",
@@ -51,6 +64,15 @@ pub struct ClusterData {
         skip_serializing_if = "Option::is_none"
     )]
     pub insecure_skip_tls_verify: Option<bool>,
+    #[serde(rename = "tls-server-name", skip_serializing_if = "Option::is_none")]
+    pub tls_server_name: Option<String>,
+    #[serde(rename = "proxy-url", skip_serializing_if = "Option::is_none")]
+    pub proxy_url: Option<String>,
+    #[serde(
+        rename = "disable-compression",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub disable_compression: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -73,26 +95,47 @@ pub struct UserEntry {
     pub user: UserData,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct UserData {
     #[serde(
         rename = "client-certificate-data",
         skip_serializing_if = "Option::is_none"
     )]
     pub client_certificate_data: Option<String>,
+    #[serde(rename = "client-certificate", skip_serializing_if = "Option::is_none")]
+    pub client_certificate: Option<String>,
     #[serde(rename = "client-key-data", skip_serializing_if = "Option::is_none")]
     pub client_key_data: Option<String>,
+    #[serde(rename = "client-key", skip_serializing_if = "Option::is_none")]
+    pub client_key: Option<String>,
     #[serde(rename = "token", skip_serializing_if = "Option::is_none")]
     pub token: Option<String>,
+    #[serde(rename = "tokenFile", skip_serializing_if = "Option::is_none")]
+    pub token_file: Option<String>,
+    #[serde(rename = "as", skip_serializing_if = "Option::is_none")]
+    pub impersonate: Option<String>,
+    #[serde(rename = "as-uid", skip_serializing_if = "Option::is_none")]
+    pub impersonate_uid: Option<String>,
+    #[serde(rename = "as-groups", skip_serializing_if = "Option::is_none")]
+    pub impersonate_groups: Option<Vec<String>>,
     #[serde(rename = "username", skip_serializing_if = "Option::is_none")]
     pub username: Option<String>,
     #[serde(rename = "password", skip_serializing_if = "Option::is_none")]
     pub password: Option<String>,
+    #[serde(rename = "auth-provider", skip_serializing_if = "Option::is_none")]
+    pub auth_provider: Option<AuthProviderConfig>,
     #[serde(rename = "exec", skip_serializing_if = "Option::is_none")]
     pub exec: Option<ExecConfig>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AuthProviderConfig {
+    pub name: String,
+    #[serde(default, skip_serializing_if = "std::collections::HashMap::is_empty")]
+    pub config: std::collections::HashMap<String, String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct ExecConfig {
     #[serde(rename = "apiVersion")]
     pub api_version: String,
@@ -101,6 +144,12 @@ pub struct ExecConfig {
     pub args: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub env: Option<Vec<EnvVar>>,
+    #[serde(rename = "installHint", skip_serializing_if = "Option::is_none")]
+    pub install_hint: Option<String>,
+    #[serde(rename = "provideClusterInfo", skip_serializing_if = "Option::is_none")]
+    pub provide_cluster_info: Option<bool>,
+    #[serde(rename = "interactiveMode", skip_serializing_if = "Option::is_none")]
+    pub interactive_mode: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -109,7 +158,7 @@ pub struct EnvVar {
     pub value: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct Preferences {}
 
 #[cfg(test)]
@@ -123,9 +172,8 @@ mod tests {
             clusters: vec![ClusterEntry {
                 cluster: ClusterData {
                     certificate_authority_data: Some("test-cert".to_string()),
-                    certificate_authority: None,
                     server: "https://127.0.0.1:6443".to_string(),
-                    insecure_skip_tls_verify: None,
+                    ..Default::default()
                 },
                 name: "test-cluster".to_string(),
             }],
@@ -139,16 +187,13 @@ mod tests {
             }],
             current_context: "test-context".to_string(),
             kind: "Config".to_string(),
-            preferences: Preferences {},
+            preferences: None,
             users: vec![UserEntry {
                 name: "test-user".to_string(),
                 user: UserData {
                     client_certificate_data: Some("cert-data".to_string()),
                     client_key_data: Some("key-data".to_string()),
-                    token: None,
-                    username: None,
-                    password: None,
-                    exec: None,
+                    ..Default::default()
                 },
             }],
         };
@@ -202,10 +247,9 @@ users:
     fn test_cluster_entry_with_insecure_skip_tls() {
         let cluster = ClusterEntry {
             cluster: ClusterData {
-                certificate_authority_data: None,
-                certificate_authority: None,
                 server: "https://insecure.example.com:6443".to_string(),
                 insecure_skip_tls_verify: Some(true),
+                ..Default::default()
             },
             name: "insecure-cluster".to_string(),
         };
@@ -219,11 +263,6 @@ users:
         let user = UserEntry {
             name: "exec-user".to_string(),
             user: UserData {
-                client_certificate_data: None,
-                client_key_data: None,
-                token: None,
-                username: None,
-                password: None,
                 exec: Some(ExecConfig {
                     api_version: "client.authentication.k8s.io/v1beta1".to_string(),
                     command: "aws".to_string(),
@@ -232,7 +271,9 @@ users:
                         name: "AWS_PROFILE".to_string(),
                         value: "default".to_string(),
                     }]),
+                    ..Default::default()
                 }),
+                ..Default::default()
             },
         };
 
@@ -263,12 +304,8 @@ users:
         let user = UserEntry {
             name: "token-user".to_string(),
             user: UserData {
-                client_certificate_data: None,
-                client_key_data: None,
                 token: Some("bearer-token-here".to_string()),
-                username: None,
-                password: None,
-                exec: None,
+                ..Default::default()
             },
         };
 
@@ -281,12 +318,9 @@ users:
         let user = UserEntry {
             name: "basic-user".to_string(),
             user: UserData {
-                client_certificate_data: None,
-                client_key_data: None,
-                token: None,
                 username: Some("admin".to_string()),
                 password: Some("secret".to_string()),
-                exec: None,
+                ..Default::default()
             },
         };
 

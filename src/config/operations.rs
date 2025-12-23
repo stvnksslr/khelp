@@ -264,9 +264,9 @@ users:
     }
 
     #[test]
-    fn test_load_kube_config_missing_api_version() {
+    fn test_load_kube_config_missing_api_version_uses_default() {
         let temp_file = NamedTempFile::new().expect("Failed to create temp file");
-        // Valid YAML but missing apiVersion
+        // Valid YAML but missing apiVersion - should use default "v1"
         std::fs::write(
             temp_file.path(),
             r#"kind: Config
@@ -280,18 +280,9 @@ preferences: {}
         .expect("Failed to write to temp file");
 
         let result = load_kube_config_from(temp_file.path());
-        assert!(result.is_err(), "Should fail for missing apiVersion");
-        let error_msg = result.unwrap_err().to_string();
-        assert!(
-            error_msg.contains("Invalid kubeconfig file"),
-            "Error should indicate invalid kubeconfig: {}",
-            error_msg
-        );
-        assert!(
-            error_msg.contains("apiVersion"),
-            "Error should mention apiVersion: {}",
-            error_msg
-        );
+        assert!(result.is_ok(), "Should succeed with default apiVersion");
+        let config = result.unwrap();
+        assert_eq!(config.api_version, "v1", "Should default to v1");
     }
 
     #[test]
