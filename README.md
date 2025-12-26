@@ -12,12 +12,12 @@ khelp simplifies working with kubeconfig files by providing intuitive commands t
 
 **Linux / macOS:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/stvnksslr/khelp/main/install.sh | bash
+curl -fsSL https://files.stvnksslr.com/khelp/install.sh | bash
 ```
 
 **Windows (PowerShell):**
 ```powershell
-irm https://raw.githubusercontent.com/stvnksslr/khelp/main/install.ps1 | iex
+irm https://files.stvnksslr.com/khelp/install.ps1 | iex
 ```
 
 ### From Source
