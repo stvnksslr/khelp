@@ -8,6 +8,18 @@ khelp simplifies working with kubeconfig files by providing intuitive commands t
 
 ## Installation
 
+### Quick Install
+
+**Linux / macOS:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/stvnksslr/khelp/main/install.sh | bash
+```
+
+**Windows (PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/stvnksslr/khelp/main/install.ps1 | iex
+```
+
 ### From Source
 
 ```bash
@@ -111,6 +123,9 @@ khelp completions zsh > ~/.zfunc/_khelp
 
 # Fish
 khelp completions fish > ~/.config/fish/completions/khelp.fish
+
+# PowerShell (add to $PROFILE)
+khelp completions powershell >> $PROFILE
 ```
 
 Or use automatic installation:
