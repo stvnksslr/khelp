@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [0.1.14](https://github.com/stvnksslr/khelp/compare/v0.1.13...v0.1.14) - 2025-12-26
+
+### Added
+- feat(rust version update): (by @stvnksslr)
+- feat(windows installer): (by @stvnksslr)
+
+### Other
+- *(readme)* moving the scripts to be served from my s3 (by @stvnksslr)
+
+### Contributors
+
+* @stvnksslr
 ## [0.1.13](https://github.com/stvnksslr/khelp/compare/v0.1.12...v0.1.13) - 2025-12-23
 
 ### Added
