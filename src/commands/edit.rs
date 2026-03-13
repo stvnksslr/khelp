@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use console::style;
 use dialoguer::{Select, theme::ColorfulTheme};
-use log::{debug, info};
+use log::debug;
 use std::env;
 use std::fs;
 use std::process::Command;
@@ -168,7 +168,7 @@ pub fn edit_context(context_name: Option<String>) -> Result<()> {
 
     let is_gui_editor = editor.contains("code") || editor.contains("vscode");
 
-    info!(
+    eprintln!(
         "Opening context configuration in your editor... ({})",
         editor
     );
@@ -178,7 +178,7 @@ pub fn edit_context(context_name: Option<String>) -> Result<()> {
         cmd.arg(&temp_file_path);
         let _ = cmd.spawn()?;
 
-        println!("Editor has been launched. Press Enter when you've finished editing.");
+        eprintln!("Editor has been launched. Press Enter when you've finished editing.");
         let mut input = String::new();
         std::io::stdin().read_line(&mut input)?;
         None // GUI editors don't return a meaningful exit status
@@ -323,7 +323,7 @@ pub fn edit_context(context_name: Option<String>) -> Result<()> {
     }
 
     save_kube_config(&modified_config)?;
-    info!(
+    eprintln!(
         "Context '{}' configuration updated successfully",
         style(&selected_context_name).green().bold()
     );

@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use console::style;
 use dialoguer::{Select, theme::ColorfulTheme};
-use log::{debug, info};
+use log::debug;
 
 use crate::config::operations::{load_kube_config, save_kube_config};
 
@@ -24,10 +24,31 @@ pub fn switch_context(context_name: Option<String>) -> Result<()> {
         }
         None => {
             debug!("No context name provided, showing selection menu");
+
+            // Build display items with current context annotation
+            let display_items: Vec<String> = config
+                .contexts
+                .iter()
+                .map(|c| {
+                    if c.name == config.current_context {
+                        format!("{} (current)", c.name)
+                    } else {
+                        c.name.clone()
+                    }
+                })
+                .collect();
+
+            // Pre-select the current context
+            let default_idx = config
+                .contexts
+                .iter()
+                .position(|c| c.name == config.current_context)
+                .unwrap_or(0);
+
             let selection = Select::with_theme(&ColorfulTheme::default())
                 .with_prompt("Select a context to switch to")
-                .default(0)
-                .items(&config.contexts.iter().map(|c| &c.name).collect::<Vec<_>>())
+                .default(default_idx)
+                .items(&display_items)
                 .interact()
                 .context("Failed to display interactive selection")?;
 
@@ -46,7 +67,7 @@ pub fn switch_context(context_name: Option<String>) -> Result<()> {
 
     save_kube_config(&config)?;
 
-    info!(
+    eprintln!(
         "Switched to context: {}",
         style(&selected_context).green().bold()
     );

@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use console::style;
 use dialoguer::{Confirm, theme::ColorfulTheme};
-use log::{debug, info};
+use log::debug;
 use std::collections::HashSet;
 
 use crate::config::operations::{load_kube_config, save_kube_config};
@@ -46,25 +46,25 @@ pub fn cleanup_orphans(force: bool) -> Result<()> {
         .collect();
 
     if orphaned_clusters.is_empty() && orphaned_users.is_empty() {
-        info!("No orphaned clusters or users found");
+        eprintln!("No orphaned clusters or users found");
         return Ok(());
     }
 
     // Display what will be cleaned up
-    println!("Found orphaned resources:");
+    eprintln!("Found orphaned resources:");
     if !orphaned_clusters.is_empty() {
-        println!("\nClusters:");
+        eprintln!("\nClusters:");
         for cluster in &orphaned_clusters {
-            println!("  - {}", style(cluster).cyan());
+            eprintln!("  - {}", style(cluster).cyan());
         }
     }
     if !orphaned_users.is_empty() {
-        println!("\nUsers:");
+        eprintln!("\nUsers:");
         for user in &orphaned_users {
-            println!("  - {}", style(user).cyan());
+            eprintln!("  - {}", style(user).cyan());
         }
     }
-    println!();
+    eprintln!();
 
     // Confirmation prompt
     if !force {
@@ -75,7 +75,7 @@ pub fn cleanup_orphans(force: bool) -> Result<()> {
             .context("Failed to get confirmation")?;
 
         if !confirmed {
-            info!("Cleanup cancelled");
+            eprintln!("Cleanup cancelled");
             return Ok(());
         }
     }
@@ -83,7 +83,7 @@ pub fn cleanup_orphans(force: bool) -> Result<()> {
     // Remove orphaned clusters
     for cluster in &orphaned_clusters {
         config.clusters.retain(|c| &c.name != cluster);
-        info!(
+        eprintln!(
             "{} Deleted orphaned cluster: {}",
             style("✓").green(),
             style(cluster).cyan()
@@ -93,7 +93,7 @@ pub fn cleanup_orphans(force: bool) -> Result<()> {
     // Remove orphaned users
     for user in &orphaned_users {
         config.users.retain(|u| &u.name != user);
-        info!(
+        eprintln!(
             "{} Deleted orphaned user: {}",
             style("✓").green(),
             style(user).cyan()
@@ -103,7 +103,7 @@ pub fn cleanup_orphans(force: bool) -> Result<()> {
     // Save the config
     save_kube_config(&config)?;
 
-    info!(
+    eprintln!(
         "Cleaned up {} cluster(s) and {} user(s)",
         orphaned_clusters.len(),
         orphaned_users.len()

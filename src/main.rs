@@ -18,16 +18,24 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
     debug!("Command line arguments parsed");
 
-    match cli.command.unwrap_or(Commands::List) {
-        Commands::List => {
+    // Set custom kubeconfig path if provided
+    if let Some(path) = cli.kubeconfig {
+        debug!("Using custom kubeconfig path: {:?}", path);
+        config::operations::set_kubeconfig_path(path);
+    }
+
+    match cli.command.unwrap_or(Commands::List {
+        output: cli::OutputFormat::Table,
+    }) {
+        Commands::List { output } => {
             debug!("Executing List command");
             let config = config::operations::load_kube_config()?;
-            commands::list::list_contexts(&config);
+            commands::list::list_contexts(&config, &output);
         }
-        Commands::Current => {
+        Commands::Current { output } => {
             debug!("Executing Current command");
             let config = config::operations::load_kube_config()?;
-            commands::current::show_current_context(&config);
+            commands::current::show_current_context(&config, &output);
         }
         Commands::Switch { context_name } => {
             debug!("Executing Switch command");

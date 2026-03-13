@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand, ValueHint};
+use clap::{Parser, Subcommand, ValueEnum, ValueHint};
 use clap_complete::Shell;
 use std::path::PathBuf;
 
@@ -9,17 +9,41 @@ use std::path::PathBuf;
 pub struct Cli {
     #[command(subcommand)]
     pub command: Option<Commands>,
+
+    /// Path to the kubeconfig file
+    #[arg(long, short = 'k', global = true, env = "KUBECONFIG", value_hint = ValueHint::FilePath)]
+    pub kubeconfig: Option<PathBuf>,
+}
+
+#[derive(Debug, Clone, ValueEnum)]
+pub enum OutputFormat {
+    /// Human-readable table output (default)
+    Table,
+    /// Bare names, one per line
+    Name,
+    /// JSON output
+    Json,
 }
 
 #[derive(Subcommand)]
 pub enum Commands {
     /// List all available contexts
-    List,
+    #[command(visible_alias = "ls")]
+    List {
+        /// Output format
+        #[arg(long, short = 'o', value_enum, default_value_t = OutputFormat::Table)]
+        output: OutputFormat,
+    },
 
     /// Get the current context
-    Current,
+    Current {
+        /// Output format
+        #[arg(long, short = 'o', value_enum, default_value_t = OutputFormat::Table)]
+        output: OutputFormat,
+    },
 
     /// Switch to a different context
+    #[command(visible_aliases = ["use", "s"])]
     Switch {
         #[arg(value_hint = ValueHint::Other)]
         context_name: Option<String>,
@@ -39,24 +63,26 @@ pub enum Commands {
     },
 
     /// Delete a specific context (also removes orphaned cluster and user)
+    #[command(visible_alias = "rm")]
     Delete {
         /// Name of the context to delete
         #[arg(value_hint = ValueHint::Other)]
         context_name: Option<String>,
 
         /// Skip confirmation prompt
-        #[arg(long)]
+        #[arg(long, short = 'f')]
         force: bool,
     },
 
     /// Clean up orphaned clusters and users not referenced by any context
     Cleanup {
         /// Skip confirmation prompt
-        #[arg(long)]
+        #[arg(long, short = 'f')]
         force: bool,
     },
 
     /// Rename a context
+    #[command(visible_alias = "mv")]
     Rename {
         /// Current name of the context
         #[arg(value_hint = ValueHint::Other)]
@@ -74,15 +100,15 @@ pub enum Commands {
         file_path: PathBuf,
 
         /// Rename conflicting entries by appending a suffix
-        #[arg(long)]
+        #[arg(long, short = 'r')]
         rename: bool,
 
         /// Overwrite existing entries with the same name
-        #[arg(long)]
+        #[arg(long, short = 'o')]
         overwrite: bool,
 
         /// Switch to the first newly added context after import
-        #[arg(long)]
+        #[arg(long, short = 's')]
         switch: bool,
     },
 
@@ -90,7 +116,7 @@ pub enum Commands {
     Completions {
         #[arg(value_enum)]
         shell: Option<Shell>,
-        #[arg(long)]
+        #[arg(long, short = 'i')]
         install: bool,
     },
 
@@ -98,7 +124,7 @@ pub enum Commands {
     #[cfg(feature = "self_update")]
     Update {
         /// Apply the update if one is available
-        #[arg(long)]
+        #[arg(long, short = 'a')]
         apply: bool,
     },
 }

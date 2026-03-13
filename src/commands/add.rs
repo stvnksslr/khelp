@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use console::style;
-use log::{debug, info, warn};
+use log::{debug, warn};
 use std::collections::HashSet;
 use std::fs;
 use std::path::PathBuf;
@@ -46,11 +46,11 @@ impl ImportSummary {
     }
 
     fn print_summary(&self) {
-        println!("\n{}", style("Import Summary:").green().bold());
-        println!("{}", style("───────────────").green());
+        eprintln!("\n{}", style("Import Summary:").green().bold());
+        eprintln!("{}", style("───────────────").green());
 
         if !self.contexts_added.is_empty() {
-            println!(
+            eprintln!(
                 "{} {} context(s): {}",
                 style("✓").green(),
                 style("Added").green().bold(),
@@ -58,7 +58,7 @@ impl ImportSummary {
             );
         }
         if !self.clusters_added.is_empty() {
-            println!(
+            eprintln!(
                 "{} {} cluster(s): {}",
                 style("✓").green(),
                 style("Added").green().bold(),
@@ -66,7 +66,7 @@ impl ImportSummary {
             );
         }
         if !self.users_added.is_empty() {
-            println!(
+            eprintln!(
                 "{} {} user(s): {}",
                 style("✓").green(),
                 style("Added").green().bold(),
@@ -75,7 +75,7 @@ impl ImportSummary {
         }
 
         if !self.contexts_overwritten.is_empty() {
-            println!(
+            eprintln!(
                 "{} {} context(s): {}",
                 style("↻").yellow(),
                 style("Overwritten").yellow().bold(),
@@ -83,7 +83,7 @@ impl ImportSummary {
             );
         }
         if !self.clusters_overwritten.is_empty() {
-            println!(
+            eprintln!(
                 "{} {} cluster(s): {}",
                 style("↻").yellow(),
                 style("Overwritten").yellow().bold(),
@@ -91,7 +91,7 @@ impl ImportSummary {
             );
         }
         if !self.users_overwritten.is_empty() {
-            println!(
+            eprintln!(
                 "{} {} user(s): {}",
                 style("↻").yellow(),
                 style("Overwritten").yellow().bold(),
@@ -100,7 +100,7 @@ impl ImportSummary {
         }
 
         if !self.contexts_skipped.is_empty() {
-            println!(
+            eprintln!(
                 "{} {} context(s): {}",
                 style("−").dim(),
                 style("Skipped").dim(),
@@ -108,7 +108,7 @@ impl ImportSummary {
             );
         }
         if !self.clusters_skipped.is_empty() {
-            println!(
+            eprintln!(
                 "{} {} cluster(s): {}",
                 style("−").dim(),
                 style("Skipped").dim(),
@@ -116,7 +116,7 @@ impl ImportSummary {
             );
         }
         if !self.users_skipped.is_empty() {
-            println!(
+            eprintln!(
                 "{} {} user(s): {}",
                 style("−").dim(),
                 style("Skipped").dim(),
@@ -213,7 +213,7 @@ pub fn add_context(file_path: PathBuf, rename: bool, overwrite: bool, switch: bo
                     },
                 };
                 external_config.contexts.push(context_entry);
-                info!("Created context entry: {}", external_config.current_context);
+                debug!("Created context entry: {}", external_config.current_context);
             }
         }
     }
@@ -357,7 +357,7 @@ pub fn add_context(file_path: PathBuf, rename: bool, overwrite: bool, switch: bo
     if !summary.has_changes() {
         warn!("No changes made - all entries already exist in the main config");
         summary.print_summary();
-        println!(
+        eprintln!(
             "\n{} Use {} to rename conflicting entries or {} to overwrite them.",
             style("Tip:").cyan().bold(),
             style("--rename").yellow(),
@@ -377,7 +377,7 @@ pub fn add_context(file_path: PathBuf, rename: bool, overwrite: bool, switch: bo
         if let Some(context_name) = first_added_context {
             main_config.current_context = context_name.clone();
             save_kube_config(&main_config)?;
-            info!(
+            eprintln!(
                 "\nSwitched to context: {}",
                 style(&context_name).green().bold()
             );

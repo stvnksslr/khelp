@@ -1,6 +1,6 @@
 use anyhow::Result;
 use console::style;
-use log::{debug, info};
+use log::debug;
 
 use crate::config::operations::{load_kube_config, save_kube_config};
 
@@ -55,7 +55,7 @@ pub fn rename_context(old_name: String, new_name: String) -> Result<()> {
     // Save the updated configuration with backup
     save_kube_config(&config)?;
 
-    info!(
+    eprintln!(
         "Renamed context from {} to {}",
         style(&old_name).yellow(),
         style(&new_name).green().bold()

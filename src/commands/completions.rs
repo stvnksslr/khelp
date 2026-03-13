@@ -1,11 +1,18 @@
 use anyhow::{Context, Result};
 use clap_complete::Shell;
 use console::style;
-use log::{debug, info};
+use log::debug;
 use std::env;
 use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
+
+/// All command names and aliases for use in completion guards
+const ALL_COMMANDS: &str =
+    "list ls current switch use s edit export delete rm rename mv add completions";
+
+/// Commands (and aliases) that accept context names as arguments
+const CONTEXT_COMMANDS: &str = "switch|use|s|edit|export|delete|rm|rename|mv";
 
 /// Generate shell completions
 ///
@@ -33,15 +40,13 @@ pub fn generate_completions(shell: Shell, install: bool) -> Result<()> {
                 println!("  prev=\"${{COMP_WORDS[COMP_CWORD-1]}}\"");
                 println!();
                 println!("  if [ \"$COMP_CWORD\" -eq 1 ]; then");
-                println!(
-                    "    COMPREPLY=( $(compgen -W \"list current switch edit export delete rename add completions\" -- \"$cur\") )"
-                );
+                println!("    COMPREPLY=( $(compgen -W \"{ALL_COMMANDS}\" -- \"$cur\") )");
                 println!("    return 0");
                 println!("  fi");
                 println!();
                 println!("  if [ \"$COMP_CWORD\" -ge 2 ]; then");
                 println!("    case \"$prev\" in");
-                println!("      switch|edit|export|delete|rename)");
+                println!("      {CONTEXT_COMMANDS})");
                 println!(
                     "        COMPREPLY=( $(compgen -W \"$(kubectl config get-contexts -o name 2>/dev/null)\" -- \"$cur\") )"
                 );
@@ -65,12 +70,17 @@ pub fn generate_completions(shell: Shell, install: bool) -> Result<()> {
                 println!("  local -a commands");
                 println!("  commands=(");
                 println!("    'list:List all available contexts'");
+                println!("    'ls:List all available contexts'");
                 println!("    'current:Get the current context'");
                 println!("    'switch:Switch to a different context'");
+                println!("    'use:Switch to a different context'");
+                println!("    's:Switch to a different context'");
                 println!("    'edit:Edit a specific context'");
                 println!("    'export:Export a specific context to stdout'");
                 println!("    'delete:Delete a specific context'");
+                println!("    'rm:Delete a specific context'");
                 println!("    'rename:Rename a context'");
+                println!("    'mv:Rename a context'");
                 println!("    'add:Add contexts from an external kubeconfig file'");
                 println!("    'completions:Generate shell completions'");
                 println!("  )");
@@ -86,7 +96,7 @@ pub fn generate_completions(shell: Shell, install: bool) -> Result<()> {
                 println!("      ;;");
                 println!("    (argument)");
                 println!("      case $line[1] in");
-                println!("        (switch|edit|export|delete|rename)");
+                println!("        ({CONTEXT_COMMANDS})");
                 println!("          local -a contexts");
                 println!(
                     "          contexts=(${{{{(f)\"$(kubectl config get-contexts -o name 2>/dev/null)\"}}}}"
@@ -106,6 +116,7 @@ pub fn generate_completions(shell: Shell, install: bool) -> Result<()> {
                 println!("_khelp");
             }
             Shell::Fish => {
+                let all_cmds = ALL_COMMANDS;
                 // Simple fish completions
                 println!("# Fish completions for khelp");
                 println!();
@@ -113,34 +124,27 @@ pub fn generate_completions(shell: Shell, install: bool) -> Result<()> {
                 println!("    kubectl config get-contexts -o name 2>/dev/null");
                 println!("end");
                 println!();
-                println!("# Main commands");
-                println!(
-                    "complete -c khelp -f -n \"not __fish_seen_subcommand_from list current switch edit export delete rename add completions\" -a list -d \"List all available contexts\""
-                );
-                println!(
-                    "complete -c khelp -f -n \"not __fish_seen_subcommand_from list current switch edit export delete rename add completions\" -a current -d \"Get the current context\""
-                );
-                println!(
-                    "complete -c khelp -f -n \"not __fish_seen_subcommand_from list current switch edit export delete rename add completions\" -a switch -d \"Switch to a different context\""
-                );
-                println!(
-                    "complete -c khelp -f -n \"not __fish_seen_subcommand_from list current switch edit export delete rename add completions\" -a edit -d \"Edit a specific context\""
-                );
-                println!(
-                    "complete -c khelp -f -n \"not __fish_seen_subcommand_from list current switch edit export delete rename add completions\" -a export -d \"Export a specific context to stdout\""
-                );
-                println!(
-                    "complete -c khelp -f -n \"not __fish_seen_subcommand_from list current switch edit export delete rename add completions\" -a delete -d \"Delete a specific context\""
-                );
-                println!(
-                    "complete -c khelp -f -n \"not __fish_seen_subcommand_from list current switch edit export delete rename add completions\" -a rename -d \"Rename a context\""
-                );
-                println!(
-                    "complete -c khelp -f -n \"not __fish_seen_subcommand_from list current switch edit export delete rename add completions\" -a add -d \"Add contexts from an external kubeconfig file\""
-                );
-                println!(
-                    "complete -c khelp -f -n \"not __fish_seen_subcommand_from list current switch edit export delete rename add completions\" -a completions -d \"Generate shell completions\""
-                );
+                println!("# Main commands and aliases");
+                for (cmd, desc) in [
+                    ("list", "List all available contexts"),
+                    ("ls", "List all available contexts"),
+                    ("current", "Get the current context"),
+                    ("switch", "Switch to a different context"),
+                    ("use", "Switch to a different context"),
+                    ("s", "Switch to a different context"),
+                    ("edit", "Edit a specific context"),
+                    ("export", "Export a specific context to stdout"),
+                    ("delete", "Delete a specific context"),
+                    ("rm", "Delete a specific context"),
+                    ("rename", "Rename a context"),
+                    ("mv", "Rename a context"),
+                    ("add", "Add contexts from an external kubeconfig file"),
+                    ("completions", "Generate shell completions"),
+                ] {
+                    println!(
+                        "complete -c khelp -f -n \"not __fish_seen_subcommand_from {all_cmds}\" -a {cmd} -d \"{desc}\""
+                    );
+                }
                 println!();
                 println!("# File path completion for add command");
                 println!(
@@ -148,21 +152,13 @@ pub fn generate_completions(shell: Shell, install: bool) -> Result<()> {
                 );
                 println!();
                 println!("# Context name completions");
-                println!(
-                    "complete -c khelp -f -n \"__fish_seen_subcommand_from switch\" -a \"(__khelp_get_contexts)\" -d \"Kubernetes context\""
-                );
-                println!(
-                    "complete -c khelp -f -n \"__fish_seen_subcommand_from edit\" -a \"(__khelp_get_contexts)\" -d \"Kubernetes context\""
-                );
-                println!(
-                    "complete -c khelp -f -n \"__fish_seen_subcommand_from export\" -a \"(__khelp_get_contexts)\" -d \"Kubernetes context\""
-                );
-                println!(
-                    "complete -c khelp -f -n \"__fish_seen_subcommand_from delete\" -a \"(__khelp_get_contexts)\" -d \"Kubernetes context\""
-                );
-                println!(
-                    "complete -c khelp -f -n \"__fish_seen_subcommand_from rename\" -a \"(__khelp_get_contexts)\" -d \"Kubernetes context\""
-                );
+                for cmd in [
+                    "switch", "use", "s", "edit", "export", "delete", "rm", "rename", "mv",
+                ] {
+                    println!(
+                        "complete -c khelp -f -n \"__fish_seen_subcommand_from {cmd}\" -a \"(__khelp_get_contexts)\" -d \"Kubernetes context\""
+                    );
+                }
                 println!();
                 println!("# Shell completions");
                 println!(
@@ -181,11 +177,18 @@ pub fn generate_completions(shell: Shell, install: bool) -> Result<()> {
                 println!(
                     "        @{{ Name = 'list'; Description = 'List all available contexts' }}"
                 );
+                println!("        @{{ Name = 'ls'; Description = 'List all available contexts' }}");
                 println!(
                     "        @{{ Name = 'current'; Description = 'Get the current context' }}"
                 );
                 println!(
                     "        @{{ Name = 'switch'; Description = 'Switch to a different context' }}"
+                );
+                println!(
+                    "        @{{ Name = 'use'; Description = 'Switch to a different context' }}"
+                );
+                println!(
+                    "        @{{ Name = 's'; Description = 'Switch to a different context' }}"
                 );
                 println!("        @{{ Name = 'edit'; Description = 'Edit a specific context' }}");
                 println!(
@@ -194,7 +197,9 @@ pub fn generate_completions(shell: Shell, install: bool) -> Result<()> {
                 println!(
                     "        @{{ Name = 'delete'; Description = 'Delete a specific context' }}"
                 );
+                println!("        @{{ Name = 'rm'; Description = 'Delete a specific context' }}");
                 println!("        @{{ Name = 'rename'; Description = 'Rename a context' }}");
+                println!("        @{{ Name = 'mv'; Description = 'Rename a context' }}");
                 println!(
                     "        @{{ Name = 'add'; Description = 'Add contexts from an external kubeconfig file' }}"
                 );
@@ -225,7 +230,7 @@ pub fn generate_completions(shell: Shell, install: bool) -> Result<()> {
                 println!();
                 println!("    # Complete context names for relevant commands");
                 println!(
-                    "    if ($command -in @('switch', 'edit', 'export', 'delete', 'rename')) {{"
+                    "    if ($command -in @('switch', 'use', 's', 'edit', 'export', 'delete', 'rm', 'rename', 'mv')) {{"
                 );
                 println!("        $contexts = kubectl config get-contexts -o name 2>$null");
                 println!("        if ($contexts) {{");
@@ -364,7 +369,7 @@ fn install_completions(shell: Shell) -> Result<()> {
 
 /// Install Bash completions
 fn install_bash_completions() -> Result<()> {
-    info!("Installing Bash completions for khelp...");
+    eprintln!("Installing Bash completions for khelp...");
 
     let home = dirs::home_dir().context("Could not find home directory")?;
     let completions_dir = home.join(".bash_completion.d");
@@ -378,30 +383,31 @@ fn install_bash_completions() -> Result<()> {
     fs::create_dir_all(&completions_dir).context("Failed to create completions directory")?;
 
     // Generate the completion script content
-    let content = r#"#!/usr/bin/env bash
+    let content = format!(
+        r#"#!/usr/bin/env bash
 
 # Dynamic Kubernetes context completion for khelp in Bash
 
 # Get the Kubernetes contexts from kubectl
-_khelp_get_contexts() {
+_khelp_get_contexts() {{
     kubectl config get-contexts -o name 2>/dev/null
-}
+}}
 
 # Complete khelp commands and options
-_khelp_complete() {
+_khelp_complete() {{
     local cur prev words cword
     _init_completion || return
 
     # Complete first argument (command)
     if [[ $cword -eq 1 ]]; then
-        COMPREPLY=($(compgen -W "list current switch edit export delete rename add completions" -- "$cur"))
+        COMPREPLY=($(compgen -W "{ALL_COMMANDS}" -- "$cur"))
         return 0
     fi
 
     # Complete second argument based on first argument
     if [[ $cword -eq 2 ]]; then
         case "$prev" in
-            switch|edit|export|delete|rename)
+            {CONTEXT_COMMANDS})
                 # Complete with context names
                 COMPREPLY=($(compgen -W "$(_khelp_get_contexts)" -- "$cur"))
                 return 0
@@ -418,11 +424,12 @@ _khelp_complete() {
     fi
 
     return 0
-}
+}}
 
 # Register the completion function
 complete -F _khelp_complete khelp
-"#;
+"#
+    );
 
     // Write the completion script
     let completions_file = completions_dir.join("khelp");
@@ -453,13 +460,13 @@ complete -F _khelp_complete khelp
         }
     }
 
-    println!(
+    eprintln!(
         "{}",
         style("Bash completions installed successfully!")
             .green()
             .bold()
     );
-    println!(
+    eprintln!(
         "Please run 'source ~/.bash_completion.d/khelp' to enable completions in your current session."
     );
 
@@ -468,7 +475,7 @@ complete -F _khelp_complete khelp
 
 /// Install Zsh completions
 fn install_zsh_completions() -> Result<()> {
-    info!("Installing Zsh completions for khelp...");
+    eprintln!("Installing Zsh completions for khelp...");
 
     let home = dirs::home_dir().context("Could not find home directory")?;
     let completions_dir = home.join(".zfunc");
@@ -477,19 +484,20 @@ fn install_zsh_completions() -> Result<()> {
     fs::create_dir_all(&completions_dir).context("Failed to create completions directory")?;
 
     // Generate the completion script content
-    let content = r#"#compdef khelp
+    let content = format!(
+        r#"#compdef khelp
 
 # Dynamic Kubernetes context completion for khelp in Zsh
 
 # Function to get Kubernetes contexts
-_khelp_get_contexts() {
+_khelp_get_contexts() {{
     local -a contexts
-    contexts=(${(f)"$(kubectl config get-contexts -o name 2>/dev/null)"})
+    contexts=(${{(f)"$(kubectl config get-contexts -o name 2>/dev/null)"}})
     _describe 'contexts' contexts
-}
+}}
 
 # Define the completion function
-_khelp() {
+_khelp() {{
     local line state
 
     _arguments -C \
@@ -501,18 +509,23 @@ _khelp() {
         command)
             _values "command" \
                 "list[List all available contexts]" \
+                "ls[List all available contexts]" \
                 "current[Get the current context]" \
                 "switch[Switch to a different context]" \
+                "use[Switch to a different context]" \
+                "s[Switch to a different context]" \
                 "edit[Edit a specific context]" \
                 "export[Export a specific context to stdout]" \
                 "delete[Delete a specific context]" \
+                "rm[Delete a specific context]" \
                 "rename[Rename a context]" \
+                "mv[Rename a context]" \
                 "add[Add contexts from an external kubeconfig file]" \
                 "completions[Generate shell completions]"
             ;;
         argument)
             case $line[1] in
-                switch|edit|export|delete|rename)
+                {CONTEXT_COMMANDS})
                     _khelp_get_contexts
                     ;;
                 completions)
@@ -521,11 +534,12 @@ _khelp() {
             esac
             ;;
     esac
-}
+}}
 
 # Register the completion function
 compdef _khelp khelp
-"#;
+"#
+    );
 
     // Write the completion script
     let completions_file = completions_dir.join("_khelp");
@@ -556,20 +570,20 @@ compdef _khelp khelp
         debug!("Added fpath configuration to ~/.zshrc");
     }
 
-    println!(
+    eprintln!(
         "{}",
         style("Zsh completions installed successfully!")
             .green()
             .bold()
     );
-    println!("Please run 'source ~/.zshrc' to enable completions in your current session.");
+    eprintln!("Please run 'source ~/.zshrc' to enable completions in your current session.");
 
     Ok(())
 }
 
 /// Install Fish completions
 fn install_fish_completions() -> Result<()> {
-    info!("Installing Fish completions for khelp...");
+    eprintln!("Installing Fish completions for khelp...");
 
     let home = dirs::home_dir().context("Could not find home directory")?;
     debug!("Home directory: {}", home.display());
@@ -584,36 +598,63 @@ fn install_fish_completions() -> Result<()> {
 
     // Generate the completion script content
     debug!("Preparing fish completion script...");
-    let content = r#"# Dynamic Kubernetes context completion for khelp in Fish
+
+    let all_cmds = ALL_COMMANDS;
+    let mut content = String::from(
+        r#"# Dynamic Kubernetes context completion for khelp in Fish
 
 function __khelp_get_contexts
     kubectl config get-contexts -o name 2>/dev/null
 end
 
-# Define command completions
-complete -c khelp -f -n "not __fish_seen_subcommand_from list current switch edit export delete rename add completions" -a list -d "List all available contexts"
-complete -c khelp -f -n "not __fish_seen_subcommand_from list current switch edit export delete rename add completions" -a current -d "Get the current context"
-complete -c khelp -f -n "not __fish_seen_subcommand_from list current switch edit export delete rename add completions" -a switch -d "Switch to a different context"
-complete -c khelp -f -n "not __fish_seen_subcommand_from list current switch edit export delete rename add completions" -a edit -d "Edit a specific context"
-complete -c khelp -f -n "not __fish_seen_subcommand_from list current switch edit export delete rename add completions" -a export -d "Export a specific context to stdout"
-complete -c khelp -f -n "not __fish_seen_subcommand_from list current switch edit export delete rename add completions" -a delete -d "Delete a specific context"
-complete -c khelp -f -n "not __fish_seen_subcommand_from list current switch edit export delete rename add completions" -a rename -d "Rename a context"
-complete -c khelp -f -n "not __fish_seen_subcommand_from list current switch edit export delete rename add completions" -a add -d "Add contexts from an external kubeconfig file"
-complete -c khelp -f -n "not __fish_seen_subcommand_from list current switch edit export delete rename add completions" -a completions -d "Generate shell completions"
+# Define command completions (including aliases)
+"#,
+    );
 
+    for (cmd, desc) in [
+        ("list", "List all available contexts"),
+        ("ls", "List all available contexts"),
+        ("current", "Get the current context"),
+        ("switch", "Switch to a different context"),
+        ("use", "Switch to a different context"),
+        ("s", "Switch to a different context"),
+        ("edit", "Edit a specific context"),
+        ("export", "Export a specific context to stdout"),
+        ("delete", "Delete a specific context"),
+        ("rm", "Delete a specific context"),
+        ("rename", "Rename a context"),
+        ("mv", "Rename a context"),
+        ("add", "Add contexts from an external kubeconfig file"),
+        ("completions", "Generate shell completions"),
+    ] {
+        content.push_str(&format!(
+            "complete -c khelp -f -n \"not __fish_seen_subcommand_from {all_cmds}\" -a {cmd} -d \"{desc}\"\n"
+        ));
+    }
+
+    content.push_str(
+        r#"
 # File path completion for add command
 complete -c khelp -F -n "__fish_seen_subcommand_from add" -d "Kubeconfig file"
 
-# Define context name completions for the relevant commands
-complete -c khelp -f -n "__fish_seen_subcommand_from switch" -a "(__khelp_get_contexts)" -d "Kubernetes context"
-complete -c khelp -f -n "__fish_seen_subcommand_from edit" -a "(__khelp_get_contexts)" -d "Kubernetes context"
-complete -c khelp -f -n "__fish_seen_subcommand_from export" -a "(__khelp_get_contexts)" -d "Kubernetes context"
-complete -c khelp -f -n "__fish_seen_subcommand_from delete" -a "(__khelp_get_contexts)" -d "Kubernetes context"
-complete -c khelp -f -n "__fish_seen_subcommand_from rename" -a "(__khelp_get_contexts)" -d "Kubernetes context"
+# Define context name completions for the relevant commands (including aliases)
+"#,
+    );
 
+    for cmd in [
+        "switch", "use", "s", "edit", "export", "delete", "rm", "rename", "mv",
+    ] {
+        content.push_str(&format!(
+            "complete -c khelp -f -n \"__fish_seen_subcommand_from {cmd}\" -a \"(__khelp_get_contexts)\" -d \"Kubernetes context\"\n"
+        ));
+    }
+
+    content.push_str(
+        r#"
 # Define shell completions for the completions command
 complete -c khelp -f -n "__fish_seen_subcommand_from completions" -a "bash zsh fish powershell elvish" -d "Shell"
-"#;
+"#,
+    );
 
     // Write the completion script
     let completions_file = completions_dir.join("khelp.fish");
@@ -624,20 +665,20 @@ complete -c khelp -f -n "__fish_seen_subcommand_from completions" -a "bash zsh f
     fs::write(&completions_file, content).context("Failed to write fish completion script")?;
     debug!("Fish completion script written successfully");
 
-    println!(
+    eprintln!(
         "{}",
         style("Fish completions installed successfully!")
             .green()
             .bold()
     );
-    println!("Fish will automatically load the completions for new sessions.");
+    eprintln!("Fish will automatically load the completions for new sessions.");
 
     Ok(())
 }
 
 /// Install PowerShell completions
 fn install_powershell_completions() -> Result<()> {
-    info!("Installing PowerShell completions for khelp...");
+    eprintln!("Installing PowerShell completions for khelp...");
 
     // Determine the PowerShell profile path based on platform
     let profile_dir = if cfg!(target_os = "windows") {
@@ -666,12 +707,17 @@ Register-ArgumentCompleter -Native -CommandName khelp -ScriptBlock {
 
     $commands = @(
         @{ Name = 'list'; Description = 'List all available contexts' }
+        @{ Name = 'ls'; Description = 'List all available contexts' }
         @{ Name = 'current'; Description = 'Get the current context' }
         @{ Name = 'switch'; Description = 'Switch to a different context' }
+        @{ Name = 'use'; Description = 'Switch to a different context' }
+        @{ Name = 's'; Description = 'Switch to a different context' }
         @{ Name = 'edit'; Description = 'Edit a specific context' }
         @{ Name = 'export'; Description = 'Export a specific context to stdout' }
         @{ Name = 'delete'; Description = 'Delete a specific context' }
+        @{ Name = 'rm'; Description = 'Delete a specific context' }
         @{ Name = 'rename'; Description = 'Rename a context' }
+        @{ Name = 'mv'; Description = 'Rename a context' }
         @{ Name = 'add'; Description = 'Add contexts from an external kubeconfig file' }
         @{ Name = 'completions'; Description = 'Generate shell completions' }
         @{ Name = 'update'; Description = 'Check for updates to khelp' }
@@ -688,8 +734,8 @@ Register-ArgumentCompleter -Native -CommandName khelp -ScriptBlock {
         return
     }
 
-    # Complete context names for relevant commands
-    if ($command -in @('switch', 'edit', 'export', 'delete', 'rename')) {
+    # Complete context names for relevant commands (including aliases)
+    if ($command -in @('switch', 'use', 's', 'edit', 'export', 'delete', 'rm', 'rename', 'mv')) {
         $contexts = kubectl config get-contexts -o name 2>$null
         if ($contexts) {
             $contexts | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
@@ -740,14 +786,14 @@ Register-ArgumentCompleter -Native -CommandName khelp -ScriptBlock {
         debug!("Added source line to PowerShell profile");
     }
 
-    println!(
+    eprintln!(
         "{}",
         style("PowerShell completions installed successfully!")
             .green()
             .bold()
     );
-    println!("Completions will be loaded automatically in new PowerShell sessions.");
-    println!(
+    eprintln!("Completions will be loaded automatically in new PowerShell sessions.");
+    eprintln!(
         "To enable in current session, run: . \"{}\"",
         completions_file.display()
     );

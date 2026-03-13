@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use console::style;
 use dialoguer::{Confirm, Select, theme::ColorfulTheme};
-use log::{debug, info, warn};
+use log::debug;
 use std::collections::HashSet;
 
 use crate::config::operations::{load_kube_config, save_kube_config};
@@ -47,7 +47,7 @@ pub fn delete_context(context_name: Option<String>, force: bool) -> Result<()> {
     let is_current_context = config.current_context == selected_context_name;
 
     if is_current_context {
-        warn!(
+        eprintln!(
             "Context '{}' is currently active",
             style(&selected_context_name).yellow()
         );
@@ -85,7 +85,7 @@ pub fn delete_context(context_name: Option<String>, force: bool) -> Result<()> {
 
                 let new_context = other_contexts[selection].clone();
                 config.current_context = new_context.clone();
-                info!(
+                eprintln!(
                     "Switched to context: {}",
                     style(&new_context).green().bold()
                 );
@@ -111,7 +111,7 @@ pub fn delete_context(context_name: Option<String>, force: bool) -> Result<()> {
             .context("Failed to get confirmation")?;
 
         if !confirmed {
-            info!("Deletion cancelled");
+            eprintln!("Deletion cancelled");
             return Ok(());
         }
     }
@@ -130,7 +130,7 @@ pub fn delete_context(context_name: Option<String>, force: bool) -> Result<()> {
     config.contexts.retain(|c| c.name != selected_context_name);
     debug!("Removed context: {}", selected_context_name);
 
-    info!(
+    eprintln!(
         "{} Deleted context: {}",
         style("✓").green(),
         style(&selected_context_name).green().bold()
@@ -169,7 +169,7 @@ pub fn delete_context(context_name: Option<String>, force: bool) -> Result<()> {
 
     // Report cleanup results
     for cluster in deleted_clusters {
-        info!(
+        eprintln!(
             "{} Deleted cluster: {}",
             style("✓").green(),
             style(&cluster).cyan()
@@ -177,7 +177,7 @@ pub fn delete_context(context_name: Option<String>, force: bool) -> Result<()> {
     }
 
     for user in deleted_users {
-        info!(
+        eprintln!(
             "{} Deleted user: {}",
             style("✓").green(),
             style(&user).cyan()

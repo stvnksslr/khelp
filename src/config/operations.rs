@@ -1,13 +1,35 @@
 use anyhow::{Context, Result};
 use dirs::home_dir;
-use log::{debug, info};
+use log::debug;
+use std::cell::RefCell;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use super::kubernetes::KubeConfig;
 
+thread_local! {
+    static KUBECONFIG_PATH_OVERRIDE: RefCell<Option<PathBuf>> = const { RefCell::new(None) };
+}
+
+/// Set a custom kubeconfig path to use instead of the default
+pub fn set_kubeconfig_path(path: PathBuf) {
+    KUBECONFIG_PATH_OVERRIDE.with(|p| {
+        *p.borrow_mut() = Some(path);
+    });
+}
+
 /// Gets the path to the Kubernetes config file
 pub fn get_kube_config_path() -> Result<PathBuf> {
+    // Check for override first
+    let override_path = KUBECONFIG_PATH_OVERRIDE.with(|p| p.borrow().clone());
+    if let Some(path) = override_path {
+        if !path.exists() {
+            anyhow::bail!("Kubernetes config file not found at: {}", path.display());
+        }
+        debug!("Using overridden kubeconfig path: {}", path.display());
+        return Ok(path);
+    }
+
     let home = home_dir().context("Could not find home directory")?;
     let kube_config_path = home.join(".kube").join("config");
 
@@ -116,6 +138,19 @@ pub fn save_kube_config(config: &KubeConfig) -> Result<()> {
 
 /// Gets the path to the Kubernetes config file, creating the .kube directory if needed
 pub fn get_kube_config_path_or_create() -> Result<PathBuf> {
+    // Check for override first
+    let override_path = KUBECONFIG_PATH_OVERRIDE.with(|p| p.borrow().clone());
+    if let Some(path) = override_path {
+        // Ensure parent directory exists for the override path
+        if let Some(parent) = path.parent()
+            && !parent.exists()
+        {
+            std::fs::create_dir_all(parent)
+                .with_context(|| format!("Failed to create directory: {}", parent.display()))?;
+        }
+        return Ok(path);
+    }
+
     let home = home_dir().context("Could not find home directory")?;
     let kube_dir = home.join(".kube");
 
@@ -144,7 +179,7 @@ pub fn save_kube_config_to(config: &KubeConfig, path: &Path) -> Result<()> {
     fs::write(path, config_yaml)
         .with_context(|| format!("Failed to write config file: {}", path.display()))?;
 
-    info!("Config updated successfully");
+    debug!("Config updated successfully");
     Ok(())
 }
 
